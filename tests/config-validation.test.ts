@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { DEFAULT_CONFIG, validateConfig } from "../src/config";
+import { DEFAULT_CONFIG, isUnbound, matchesKeybinding, validateConfig } from "../src/config";
 
 describe("validateConfig", () => {
   // Get a valid base config to modify
@@ -146,5 +146,65 @@ describe("validateConfig", () => {
     spy.mockRestore();
     expect(corrections).toContain("font.size");
     expect(corrections).toContain("cursor.style");
+  });
+
+  describe("unbind syntax (#484)", () => {
+    it("isUnbound recognizes null, undefined, empty string", () => {
+      expect(isUnbound(null)).toBe(true);
+      expect(isUnbound(undefined)).toBe(true);
+      expect(isUnbound("")).toBe(true);
+      expect(isUnbound("   ")).toBe(true);
+    });
+
+    it("isUnbound recognizes the documented keywords case-insensitively", () => {
+      for (const v of ["none", "None", "NONE", "clear", "Unbound", "DISABLED", " disabled "]) {
+        expect(isUnbound(v)).toBe(true);
+      }
+    });
+
+    it("isUnbound rejects normal binding strings and non-strings", () => {
+      expect(isUnbound("cmd+t")).toBe(false);
+      expect(isUnbound("ctrl+shift+a")).toBe(false);
+      expect(isUnbound(42)).toBe(false);
+      expect(isUnbound({})).toBe(false);
+    });
+
+    it("validateConfig normalizes unbind values to empty string without warning", () => {
+      const config = baseConfig() as any;
+      config.keybindings.newTab = null;
+      config.keybindings.closeTab = "none";
+      config.keybindings.nextTab = "DISABLED";
+      config.keybindings.prevTab = "";
+      const corrections: string[] = [];
+      const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const result = validateConfig(config as any, corrections);
+      spy.mockRestore();
+      expect(result.keybindings.newTab).toBe("");
+      expect(result.keybindings.closeTab).toBe("");
+      expect(result.keybindings.nextTab).toBe("");
+      expect(result.keybindings.prevTab).toBe("");
+      expect(corrections.filter((c) => c.startsWith("keybindings."))).toEqual([]);
+    });
+
+    it("validateConfig still corrects malformed (non-unbind) bindings", () => {
+      const config = baseConfig() as any;
+      config.keybindings.newTab = "not a real binding!@#";
+      const corrections: string[] = [];
+      const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      validateConfig(config as any, corrections);
+      spy.mockRestore();
+      expect(corrections).toContain("keybindings.newTab");
+    });
+
+    it("matchesKeybinding short-circuits on empty binding", () => {
+      const event = {
+        key: "t",
+        metaKey: true,
+        ctrlKey: false,
+        shiftKey: false,
+        altKey: false,
+      } as unknown as KeyboardEvent;
+      expect(matchesKeybinding(event, "")).toBe(false);
+    });
   });
 });

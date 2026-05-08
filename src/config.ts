@@ -182,6 +182,16 @@ function deepMerge(
 
 const CURSOR_STYLES = ["bar", "block", "underline"];
 
+/** Values that explicitly disable a keybinding (#484). */
+const UNBIND_KEYWORDS = new Set(["", "none", "clear", "unbound", "disabled"]);
+
+/** True when the given value should be treated as "no keybinding". */
+export function isUnbound(v: unknown): boolean {
+  if (v === null || v === undefined) return true;
+  if (typeof v !== "string") return false;
+  return UNBIND_KEYWORDS.has(v.trim().toLowerCase());
+}
+
 export function validateConfig(config: Config, corrections?: string[]): Config {
   const result = { ...config };
   const warn = (field: string, msg: string) => {
@@ -238,10 +248,15 @@ export function validateConfig(config: Config, corrections?: string[]): Config {
     result.sidebar = { ...result.sidebar, position: DEFAULT_CONFIG.sidebar.position };
   }
 
-  // Keybindings — validate format (modifier+key)
+  // Keybindings — validate format (modifier+key). Unbind values are
+  // intentional opt-outs (#484) and normalize to "" without warning.
   const KEYBINDING_RE = /^(?:(?:cmd|ctrl|shift|alt|opt)\+)*[a-z0-9[\]\\/\-=`,.';\s]+$/i;
   if (result.keybindings) {
     for (const [key, val] of Object.entries(result.keybindings)) {
+      if (isUnbound(val)) {
+        (result.keybindings as Record<string, string>)[key] = "";
+        continue;
+      }
       if (typeof val !== "string" || !KEYBINDING_RE.test(val)) {
         warn(`keybindings.${key}`, `invalid format "${val}"`);
         const defaultVal = (DEFAULT_CONFIG.keybindings as Record<string, string>)[key];
@@ -428,6 +443,7 @@ const SHIFTED_KEYS: Record<string, string> = {
 };
 
 export function matchesKeybinding(e: KeyboardEvent, binding: string): boolean {
+  if (!binding) return false; // unbound (#484)
   const parts = binding.toLowerCase().split("+");
   const wantCmd = parts.includes("cmd");
   const wantCtrl = parts.includes("ctrl");
