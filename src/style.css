@@ -507,48 +507,6 @@ body {
   color: var(--text-secondary);
 }
 
-/* Context line — tertiary info: folder + branch (#331) */
-.tab-context {
-  font-size: var(--font-xs);
-  font-weight: normal;
-  color: var(--text-disabled);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  padding-left: calc(10px + var(--space-3)); /* align with title (past icon) */
-  line-height: 1.3;
-}
-
-.tab-entry.active .tab-context {
-  color: var(--text-tertiary);
-}
-
-/* Expanded detail — recent actions shown in focus mode (#342) */
-.tab-expanded-detail {
-  padding-left: calc(10px + var(--space-3));
-  padding-top: var(--space-2);
-  padding-bottom: var(--space-1);
-}
-
-.expanded-label {
-  font-size: var(--font-xs);
-  color: var(--text-disabled);
-  margin-bottom: var(--space-1);
-}
-
-.expanded-action {
-  font-size: var(--font-xs);
-  color: var(--text-tertiary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  line-height: 1.5;
-}
-
-.tab-entry.active .expanded-action {
-  color: var(--text-secondary);
-}
-
 /* Per-pane status lines (multi-pane tabs) */
 .tab-pane-list {
   padding-left: var(--space-2);
@@ -600,11 +558,6 @@ body {
   display: none;
 }
 
-.sidebar-compact .tab-context,
-.sidebar-compact .tab-expanded-detail {
-  display: none;
-}
-
 .sidebar-compact .tab-pane-list {
   padding-left: 0;
 }
@@ -626,10 +579,7 @@ body {
   display: none;
 }
 
-.sidebar-slim .tab-detail,
-.sidebar-slim .tab-context,
-.sidebar-slim .tab-expanded-detail,
-.sidebar-slim .tab-action-row {
+.sidebar-slim .tab-detail {
   display: none;
 }
 
@@ -1118,30 +1068,12 @@ body {
   contain: layout style;
 }
 
-.split-horizontal {
-  flex-direction: row;
-}
-
-.split-vertical {
-  flex-direction: column;
-}
-
 /* Split dividers — transparent gap between pane boxes */
 .split-divider {
   flex-shrink: 0;
   z-index: 10;
   position: relative;
   background: transparent;
-}
-
-.split-divider-horizontal {
-  width: var(--split-divider-width);
-  cursor: col-resize;
-}
-
-.split-divider-vertical {
-  height: var(--split-divider-width);
-  cursor: row-resize;
 }
 
 /* Per-pane status footer — replaces global #status-bar (#348) */
@@ -1181,37 +1113,6 @@ body {
 }
 
 .footer-branch {
-  color: var(--text-tertiary);
-}
-
-/* Context usage bar — compact inline progress indicator */
-.footer-context-wrap {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.context-bar {
-  display: inline-flex;
-  width: 60px;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--border-subtle);
-  overflow: hidden;
-}
-
-.context-bar-fill {
-  height: 100%;
-  border-radius: 2px;
-  background: currentColor;
-  transition:
-    width 0.3s ease,
-    color 0.3s ease;
-}
-
-.footer-context-pct {
-  font-size: var(--font-2xs);
-  font-variant-numeric: tabular-nums;
   color: var(--text-tertiary);
 }
 
@@ -1687,24 +1588,6 @@ body {
   color: var(--text-primary);
 }
 
-.palette-divider {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  padding: var(--space-3) var(--space-6) var(--space-1);
-  font-size: var(--font-xs);
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: var(--letter-spacing-wide);
-}
-
-.palette-divider::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--bg-active);
-}
-
 /* Workspace overview panel */
 .workspace-panel {
   position: absolute;
@@ -1810,21 +1693,6 @@ body {
   color: var(--text-tertiary);
   padding-left: var(--space-6);
   margin-top: var(--space-1);
-}
-.workspace-entry-agent {
-  font-size: var(--font-sm);
-  color: var(--text-secondary);
-  padding-left: var(--space-6);
-  margin-top: var(--space-1);
-}
-.workspace-entry-action {
-  font-size: var(--font-xs);
-  color: var(--text-secondary);
-  padding-left: var(--space-6);
-  margin-top: var(--space-1);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 .workspace-panel-empty {
   padding: var(--space-8);
