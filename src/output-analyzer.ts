@@ -1,5 +1,36 @@
 import { type OutputEvent, type OutputMatcher, DEFAULT_MATCHERS } from "./matchers";
 
+/** Fixed-capacity ring buffer with O(1) push past capacity. (#463)
+ *  Iterates in chronological order (oldest first). */
+class RingBuffer<T> implements Iterable<T> {
+  private readonly slots: (T | undefined)[];
+  private writeIdx = 0;
+  length = 0;
+
+  constructor(private readonly capacity: number) {
+    this.slots = new Array(capacity);
+  }
+
+  push(item: T): void {
+    this.slots[this.writeIdx] = item;
+    this.writeIdx = (this.writeIdx + 1) % this.capacity;
+    if (this.length < this.capacity) this.length++;
+  }
+
+  clear(): void {
+    this.slots.fill(undefined);
+    this.writeIdx = 0;
+    this.length = 0;
+  }
+
+  *[Symbol.iterator](): IterableIterator<T> {
+    const start = this.length < this.capacity ? 0 : this.writeIdx;
+    for (let i = 0; i < this.length; i++) {
+      yield this.slots[(start + i) % this.capacity] as T;
+    }
+  }
+}
+
 // prettier-ignore
 const ANSI_RE = /\x1b\[[0-9;]*[a-zA-Z]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b[()][0-9A-B]|\x1b[\x20-\x2f][\x40-\x7e]|\x08/g; // eslint-disable-line no-control-regex
 
@@ -30,7 +61,7 @@ export class OutputAnalyzer {
   private matchTimer: ReturnType<typeof setTimeout> | null = null;
 
   /** Stored event history with positions for timeline rendering */
-  readonly eventHistory: OutputEvent[] = [];
+  readonly eventHistory = new RingBuffer<OutputEvent>(MAX_EVENT_HISTORY);
 
   /** Current terminal line (set externally by Pane) */
   currentLine = 0;
@@ -81,9 +112,6 @@ export class OutputAnalyzer {
         };
 
         this.eventHistory.push(event);
-        if (this.eventHistory.length > MAX_EVENT_HISTORY) {
-          this.eventHistory.shift();
-        }
 
         this.listener?.(event);
       }
@@ -112,6 +140,6 @@ export class OutputAnalyzer {
     this.pendingText = "";
     this.overlapWindow = "";
     this.lastFired.clear();
-    this.eventHistory.length = 0;
+    this.eventHistory.clear();
   }
 }

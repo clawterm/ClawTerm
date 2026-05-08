@@ -219,7 +219,7 @@ export class Pane {
         if (isPrimaryMod(e) && e.key === "k") {
           e.preventDefault();
           this.terminal.clear();
-          this.analyzer.eventHistory.length = 0;
+          this.analyzer.eventHistory.clear();
           this.renderGutter();
           return false;
         }
@@ -336,7 +336,7 @@ export class Pane {
             separator: true,
             action: () => {
               this.terminal.clear();
-              this.analyzer.eventHistory.length = 0;
+              this.analyzer.eventHistory.clear();
               this.renderGutter();
             },
           },
