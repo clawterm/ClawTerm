@@ -29,6 +29,7 @@ jobs:
       # Run frontend checks only (lint, format, test, typecheck) — cargo test
       # is handled by the backend job on its target platform.
       - run: npm run lint && npm run format:check && npm run test && npx tsc --noEmit
+      - run: ./scripts/lint-tokens.sh
       - run: npm run build
 
   backend:

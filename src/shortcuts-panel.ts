@@ -205,7 +205,7 @@ export function createSettingsPanel(opts: PanelOptions): ShortcutsPanel {
 
   const shortcutsHeader = document.createElement("div");
   shortcutsHeader.className = "shortcuts-group-title";
-  shortcutsHeader.style.marginTop = "var(--space-9)";
+  shortcutsHeader.style.marginTop = "var(--space-7)";
   shortcutsHeader.textContent = "Keyboard Shortcuts";
   panel.appendChild(shortcutsHeader);
 
