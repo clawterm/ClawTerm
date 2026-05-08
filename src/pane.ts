@@ -8,6 +8,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { spawn, type IPty, type IPtyForkOptions } from "tauri-pty";
 import { TERMINAL_THEME, type Config } from "./config";
 import { OutputAnalyzer } from "./output-analyzer";
+import { ScrollAnchor } from "./scroll-anchor";
 import type { OutputEvent, OutputMatcher } from "./matchers";
 import { DEFAULT_MATCHERS } from "./matchers";
 import { registerOscHandlers, type OscNotificationEvent } from "./osc-handler";
@@ -54,38 +55,10 @@ export class Pane {
   private scrollPill: HTMLDivElement | null = null;
   private pasteOverlay: HTMLDivElement | null = null;
   private webgl: WebGLManager | null = null;
-  private isScrolledUp = false;
-  /** True when the user intentionally scrolled up (not from programmatic scroll).
-   *  Persists across tab switches. Cleared when the user scrolls to bottom or
-   *  clicks the scroll pill. Used to prevent auto-scroll-to-bottom on fit(). */
-  private userScrolledUp = false;
-  /** True while fit() is performing a reflow + scroll restore — suppresses onScroll side-effects */
-  private fittingNow = false;
-  /** True while the pane's scroll position is locked during tab show/hide transitions.
-   *  While locked, onScroll is suppressed, fitCore() uses the locked position, and
-   *  flushWrites() corrects any scroll corruption after each write.  The lock is
-   *  acquired on hide() and released only after all destabilizing operations (fit,
-   *  write, WebGL) complete in show(). (#184) */
-  private scrollLocked = false;
-  /** Distance from the bottom of the buffer at lock time, in lines.
-   *  This is the authoritative scroll-restore primitive — robust against scrollback
-   *  trimming during the locked window because the bottom of the buffer is always
-   *  the most recent output (never trimmed), so "N lines above the bottom" remains
-   *  meaningful even after the buffer shrinks. (#419) */
-  private lockedDistanceFromBottom: number | null = null;
-  /** Buffer length at lock time — used by unlockScroll() as a tripwire to detect
-   *  any future code path that mutates the buffer during a hide/show cycle. The
-   *  distance-from-bottom math compensates for legitimate trims; the warning is
-   *  purely a developer alarm so the next #305-class regression is caught at the
-   *  moment of introduction. (#419 Fix 5) */
-  private lockedBufferLength: number | null = null;
-  /** Set true in setVisible(false) when we deliberately trim the scrollback
-   *  for the #305 memory optimization. Read by unlockScroll() to suppress the
-   *  Fix 5 invariant warning on this known-legitimate path; cleared inside
-   *  unlockScroll() so the next hide/show cycle starts fresh. Without this
-   *  flag the tripwire would fire on every tab switch with > HIDDEN_SCROLLBACK
-   *  lines of buffer, drowning future regressions in noise. (#419 Fix 5) */
-  private trimmedDuringHide = false;
+  /** Encapsulates all scroll-preservation invariants: hide/show locking,
+   *  user-intent flag, fit-in-progress flag, multi-frame flush anchor,
+   *  and the buffer-mutation tripwire. (#476 — extracted from #184/#305/#419/#432/#437). */
+  private readonly scrollAnchor: ScrollAnchor;
   /** RAF-based write batching — queues PTY data and flushes once per frame
    *  to prevent terminal.write() from racing with fitAddon.fit() mid-reflow.
    *  Append-only with a head pointer; eviction nulls slots and advances
@@ -97,10 +70,6 @@ export class Pane {
   /** Cap each visible-flush rAF at this much data so a hidden-tab backlog
    *  doesn't drop a frame on tab focus. (#467) */
   private static readonly FLUSH_CHUNK_BYTES = 32 * 1024;
-  /** Pre-flush distance-from-bottom held across chunks of a multi-frame
-   *  flush so every chunk restores the same scroll position. null when
-   *  no flush sequence is active. (#467) */
-  private flushSavedDistance: number | null = null;
   /** Reusable merge buffer for flushWrites() — grows as needed, never shrinks.
    *  Avoids allocating a new Uint8Array on every animation frame. */
   private mergeBuffer: Uint8Array | null = null;
@@ -188,6 +157,7 @@ export class Pane {
       macOptionIsMeta: true,
       macOptionClickForcesSelection: true,
     });
+    this.scrollAnchor = new ScrollAnchor(this.terminal, this.id);
 
     // Intercept keys before xterm processes them
     this.terminal.attachCustomKeyEventHandler((e: KeyboardEvent) => {
@@ -422,12 +392,12 @@ export class Pane {
         // let xterm auto-follow snap the viewport back to the bottom —
         // the user has to scroll repeatedly before one event "sticks".
         // Setting the flag up-front closes that race. (#432)
-        this.userScrolledUp = true;
+        this.scrollAnchor.setUserScrolledUp(true);
         // If the show() pipeline hasn't finished releasing the scroll
         // lock yet, user intent wins — abandon the pending restore so
-        // updateScrollState() stops early-returning on scrollLocked
+        // updateScrollState() stops early-returning on isLocked
         // and the next flushWrites() doesn't snap back to baseY. (#437)
-        if (this.scrollLocked) this.abandonScrollLock();
+        if (this.scrollAnchor.isLocked) this.scrollAnchor.abandon();
         return true;
       }
       const outputAge = Date.now() - this.lastOutputAt;
@@ -694,14 +664,14 @@ export class Pane {
       // from-bottom restoration would still produce a clean clamp in that
       // case, but the perfect restoration is "no mutation at all" so we
       // prefer that path when we can detect it.
-      if (!this.userScrolledUp) {
+      if (!this.scrollAnchor.isUserScrolledUp) {
         const currentScrollback = this.terminal.options.scrollback ?? this.config.scrollback;
         if (currentScrollback > Pane.HIDDEN_SCROLLBACK) {
           this.savedScrollback = currentScrollback;
           this.terminal.options.scrollback = Pane.HIDDEN_SCROLLBACK;
           // Mark this as a known-legitimate buffer mutation so the Fix 5
-          // invariant warning in unlockScroll() doesn't fire on it. (#419)
-          this.trimmedDuringHide = true;
+          // invariant warning in unlock() doesn't fire on it. (#419)
+          this.scrollAnchor.noteTrimmedDuringHide();
         }
       }
       // Pause gutter timer for hidden panes — no point updating invisible DOM
@@ -793,34 +763,16 @@ export class Pane {
 
   /** Shared fit implementation — preserves scroll position across reflow. */
   private fitCore() {
-    // When scroll-locked (tab transition), use the locked distance as the
-    // authoritative source — the live buffer state may be stale or mid-mutation.
-    // The actual restoration happens in unlockScroll(), so here we just reflow
-    // and do a minimal scroll correction to keep xterm.js internals consistent.
-    const buf = this.terminal.buffer.active;
-    const distance =
-      this.scrollLocked && this.lockedDistanceFromBottom !== null
-        ? this.lockedDistanceFromBottom
-        : Math.max(0, buf.baseY - buf.viewportY);
-    this.fittingNow = true;
+    // ScrollAnchor.currentDistance() returns the locked anchor when in a
+    // tab-transition critical section, otherwise the live distance. The
+    // actual restoration on unlock happens in scrollAnchor.unlock().
+    const distance = this.scrollAnchor.currentDistance();
+    this.scrollAnchor.setFitting(true);
     try {
       this.fitAddon.fit();
-      this.restoreScrollByDistance(distance);
+      this.scrollAnchor.restore(distance);
     } finally {
-      this.fittingNow = false;
-    }
-  }
-
-  /** Restore scroll position after a reflow or write, expressed as
-   *  distance-from-bottom (in lines).  Distance is robust against scrollback
-   *  trims that may have happened in between save and restore. (#419) */
-  private restoreScrollByDistance(distance: number) {
-    if (distance === 0 && !this.userScrolledUp) {
-      this.terminal.scrollToBottom();
-    } else {
-      const maxScroll = this.terminal.buffer.active.baseY;
-      const targetY = Math.max(0, maxScroll - distance);
-      this.terminal.scrollToLine(targetY);
+      this.scrollAnchor.setFitting(false);
     }
   }
 
@@ -832,21 +784,14 @@ export class Pane {
     this.writeRafId = 0;
     const totalQueued = this.pendingWriteData.length - this.pendingHead;
     if (this.disposed || totalQueued === 0) {
-      this.flushSavedDistance = null;
+      this.scrollAnchor.clearFlushAnchor();
       return;
     }
 
     // Snapshot scroll state ONCE per flush sequence (held across chunks).
     // Use distance-from-bottom because the write grows baseY underneath
     // any saved viewportY index. (#419)
-    if (this.flushSavedDistance === null) {
-      const buf = this.terminal.buffer.active;
-      this.flushSavedDistance =
-        this.scrollLocked && this.lockedDistanceFromBottom !== null
-          ? this.lockedDistanceFromBottom
-          : Math.max(0, buf.baseY - buf.viewportY);
-    }
-    const savedDistance = this.flushSavedDistance;
+    const savedDistance = this.scrollAnchor.ensureFlushAnchor();
 
     // Decide how many chunks to consume this frame: up to FLUSH_CHUNK_BYTES,
     // always at least one (so we make forward progress even on a giant chunk).
@@ -912,14 +857,14 @@ export class Pane {
       const liveBuf = this.terminal.buffer.active;
       const liveDistance = Math.max(0, liveBuf.baseY - liveBuf.viewportY);
       let distance = Math.max(savedDistance, liveDistance);
-      if (distance === 0 && this.userScrolledUp) {
+      if (distance === 0 && this.scrollAnchor.isUserScrolledUp) {
         distance = 1;
       }
       if (distance > 0) {
         const targetY = Math.max(0, liveBuf.baseY - distance);
-        this.fittingNow = true;
+        this.scrollAnchor.setFitting(true);
         this.terminal.scrollToLine(targetY);
-        this.fittingNow = false;
+        this.scrollAnchor.setFitting(false);
       }
 
       if (moreRemaining) {
@@ -931,8 +876,8 @@ export class Pane {
       }
 
       // Final chunk — drop the saved distance and surface the scroll pill.
-      this.flushSavedDistance = null;
-      if (this.isScrolledUp) {
+      this.scrollAnchor.clearFlushAnchor();
+      if (this.scrollAnchor.isScrolledUp) {
         this.showScrollPill("new-output");
       }
     });
@@ -962,14 +907,14 @@ export class Pane {
   private scrollSafeWrite(data: string) {
     const buf = this.terminal.buffer.active;
     const savedDistance = Math.max(0, buf.baseY - buf.viewportY);
-    const wasScrolledUp = this.userScrolledUp;
+    const wasScrolledUp = this.scrollAnchor.isUserScrolledUp;
     this.terminal.write(data, () => {
       if (wasScrolledUp) {
         const max = this.terminal.buffer.active.baseY;
         const targetY = Math.max(0, max - savedDistance);
-        this.fittingNow = true;
+        this.scrollAnchor.setFitting(true);
         this.terminal.scrollToLine(targetY);
-        this.fittingNow = false;
+        this.scrollAnchor.setFitting(false);
       }
     });
   }
@@ -986,15 +931,15 @@ export class Pane {
    *  Suppressed during programmatic scrolls (fit, scroll lock) to prevent
    *  race-induced misclassification of scroll intent. */
   private updateScrollState() {
-    if (this.fittingNow || this.scrollLocked) return;
+    if (this.scrollAnchor.isFitting || this.scrollAnchor.isLocked) return;
     const buf = this.terminal.buffer.active;
     const atBottom = buf.viewportY >= buf.baseY;
-    this.isScrolledUp = !atBottom;
+    this.scrollAnchor.setScrolledUp(!atBottom);
     if (atBottom) {
-      this.userScrolledUp = false;
+      this.scrollAnchor.setUserScrolledUp(false);
       this.hideScrollPill();
     } else {
-      this.userScrolledUp = true;
+      this.scrollAnchor.setUserScrolledUp(true);
       // Show the pill whenever the user is scrolled up — not just when new
       // output arrives. The pill is the user's one-click escape hatch back
       // to the live tail; gating it on "new output" left users stuck
@@ -1028,7 +973,7 @@ export class Pane {
     }
     pill.addEventListener("click", () => {
       this.terminal.scrollToBottom();
-      this.userScrolledUp = false;
+      this.scrollAnchor.setUserScrolledUp(false);
       this.hideScrollPill();
     });
     this.element.appendChild(pill);
@@ -1048,7 +993,7 @@ export class Pane {
    *  including the case where Fix 1's distance-from-bottom clamp deposited
    *  them at a non-bottom position. (#419 Fix 4) */
   refreshScrollPill() {
-    if (this.userScrolledUp && !this.scrollPill) {
+    if (this.scrollAnchor.isUserScrolledUp && !this.scrollPill) {
       this.showScrollPill("scrolled");
     }
   }
@@ -1122,76 +1067,15 @@ export class Pane {
    *  never lines near the bottom, so "N lines above the bottom" survives any
    *  legitimate buffer mutation while a tab is hidden. (#184, #419) */
   lockScroll() {
-    this.scrollLocked = true;
-    const buf = this.terminal.buffer.active;
-    this.lockedDistanceFromBottom = Math.max(0, buf.baseY - buf.viewportY);
-    this.lockedBufferLength = buf.length;
-  }
-
-  /** Release the scroll lock without restoring position — used when the user
-   *  takes an action (e.g. wheel-up) that supersedes the pending restore.
-   *  Unlike unlockScroll(), this performs no scrollToLine/scrollToBottom. (#437) */
-  private abandonScrollLock() {
-    this.scrollLocked = false;
-    this.lockedDistanceFromBottom = null;
-    this.lockedBufferLength = null;
-    this.trimmedDuringHide = false;
+    this.scrollAnchor.lock();
   }
 
   /** Release the scroll lock and perform the single authoritative scroll
-   *  restoration.  This is the ONLY point where scroll position is restored
-   *  after a tab transition — all intermediate operations just preserve the
-   *  locked position without trying to restore it themselves. (#184)
-   *
-   *  Restoration uses the locked distance-from-bottom, which is robust against
-   *  any scrollback trim that may have happened during the hidden window
-   *  (#305 + #419). If the user was deeper than the trimmed buffer can hold,
-   *  we clamp to viewportY=0 (the oldest surviving line), which is strictly
-   *  better than landing at viewportY=0 of the original buffer (the prior
-   *  bug, where the saved index pointed at deleted lines). */
+   *  restoration. Delegates to ScrollAnchor.unlock() — see the class-level
+   *  doc on ScrollAnchor for the full semantics around the buffer-length
+   *  tripwire and the hidden-trim gate. (#184, #305, #419) */
   unlockScroll() {
-    if (!this.scrollLocked) return;
-    this.scrollLocked = false;
-    const buf = this.terminal.buffer.active;
-    // Tripwire: if the buffer length changed during the lock window AND it
-    // wasn't the known #305 hidden-tab trim, some unknown code path mutated
-    // the buffer outside the queued-write path. The distance-from-bottom
-    // restoration below still produces the correct visual result, but log
-    // loudly so the next #305-class regression is caught at the moment of
-    // introduction. The trimmedDuringHide gate is essential — without it the
-    // warning fires on every tab switch with > HIDDEN_SCROLLBACK lines of
-    // buffer, which is exactly the noise pattern this tripwire is meant to
-    // prevent. (#419 Fix 5)
-    if (
-      !this.trimmedDuringHide &&
-      this.lockedBufferLength !== null &&
-      buf.length !== this.lockedBufferLength
-    ) {
-      logger.warn(
-        `[pane ${this.id}] scroll-lock invariant: buffer length changed during lock ` +
-          `(was ${this.lockedBufferLength}, now ${buf.length}). ` +
-          `Distance-from-bottom restoration will compensate, but this indicates ` +
-          `a code path mutating the buffer during hide/show — investigate.`,
-      );
-    }
-    this.trimmedDuringHide = false;
-    if (this.lockedDistanceFromBottom !== null) {
-      const maxScroll = buf.baseY;
-      const distance = this.lockedDistanceFromBottom;
-      this.fittingNow = true; // suppress onScroll side-effects during restoration
-      try {
-        if (distance === 0 && !this.userScrolledUp) {
-          this.terminal.scrollToBottom();
-        } else {
-          const targetY = Math.max(0, maxScroll - distance);
-          this.terminal.scrollToLine(targetY);
-        }
-      } finally {
-        this.fittingNow = false;
-      }
-    }
-    this.lockedDistanceFromBottom = null;
-    this.lockedBufferLength = null;
+    this.scrollAnchor.unlock();
   }
 
   /**
@@ -1254,7 +1138,7 @@ export class Pane {
       this.pendingWriteData.length = 0;
       this.pendingHead = 0;
       this.pendingBytes = 0;
-      this.flushSavedDistance = null;
+      this.scrollAnchor.clearFlushAnchor();
     }
     // Dismiss any open paste confirm dialog for this pane
     this.pasteOverlay?.remove();
