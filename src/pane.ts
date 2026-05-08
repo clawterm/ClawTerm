@@ -87,10 +87,19 @@ export class Pane {
    *  lines of buffer, drowning future regressions in noise. (#419 Fix 5) */
   private trimmedDuringHide = false;
   /** RAF-based write batching — queues PTY data and flushes once per frame to
-   *  prevent terminal.write() from racing with fitAddon.fit() mid-reflow */
-  private pendingWriteData: Uint8Array[] = [];
-  /** Running total of bytes in pendingWriteData — avoids O(n) iteration for cap checks */
+   *  prevent terminal.write() from racing with fitAddon.fit() mid-reflow.
+   *
+   *  Uses a head-pointer queue: push() always appends, overflow eviction
+   *  advances pendingHead instead of calling Array.shift() (which is O(n)
+   *  on the live entries). The dead prefix is compacted in bulk when it
+   *  grows past a threshold, so a long-hidden agent stream can't leak
+   *  memory through accumulating undefined slots. (#468) */
+  private pendingWriteData: (Uint8Array | undefined)[] = [];
+  private pendingHead = 0;
+  /** Running total of live bytes in pendingWriteData — avoids O(n) iteration for cap checks */
   private pendingBytes = 0;
+  /** When the dead prefix grows past this, compact in one splice. */
+  private static readonly PENDING_COMPACT_THRESHOLD = 256;
   /** Reusable merge buffer for flushWrites() — grows as needed, never shrinks.
    *  Avoids allocating a new Uint8Array on every animation frame. */
   private mergeBuffer: Uint8Array | null = null;
@@ -516,9 +525,23 @@ export class Pane {
         this.pendingWriteData.push(bytes);
         this.pendingBytes += bytes.length;
         if (!this.tabVisible) {
-          // Cap accumulated data to prevent unbounded memory growth
-          while (this.pendingBytes > Pane.MAX_HIDDEN_PENDING_BYTES && this.pendingWriteData.length > 1) {
-            this.pendingBytes -= this.pendingWriteData.shift()!.length;
+          // Cap accumulated data to prevent unbounded memory growth. Advance
+          // pendingHead instead of shift()-ing — avoids O(n) per eviction
+          // when the queue is long. (#468)
+          while (
+            this.pendingBytes > Pane.MAX_HIDDEN_PENDING_BYTES &&
+            this.pendingWriteData.length - this.pendingHead > 1
+          ) {
+            const evicted = this.pendingWriteData[this.pendingHead]!;
+            this.pendingBytes -= evicted.length;
+            this.pendingWriteData[this.pendingHead] = undefined;
+            this.pendingHead++;
+          }
+          // Compact the dead prefix in one splice when it gets large, so the
+          // backing array doesn't grow unboundedly during long hidden periods.
+          if (this.pendingHead > Pane.PENDING_COMPACT_THRESHOLD) {
+            this.pendingWriteData.splice(0, this.pendingHead);
+            this.pendingHead = 0;
           }
           return;
         }
@@ -646,7 +669,7 @@ export class Pane {
         this.terminal.options.scrollback = this.savedScrollback;
         this.savedScrollback = null;
       }
-      if (this.pendingWriteData.length > 0 && !this.writeRafId) {
+      if (this.pendingWriteData.length - this.pendingHead > 0 && !this.writeRafId) {
         // Flush accumulated writes now that we're visible
         this.writeRafId = requestAnimationFrame(() => this.flushWrites());
       }
@@ -798,7 +821,8 @@ export class Pane {
   /** Flush all queued PTY writes in a single terminal.write() call. */
   private flushWrites() {
     this.writeRafId = 0;
-    if (this.disposed || this.pendingWriteData.length === 0) return;
+    const queueLen = this.pendingWriteData.length - this.pendingHead;
+    if (this.disposed || queueLen === 0) return;
 
     // Snapshot scroll state BEFORE the write — terminal.write() will mutate
     // baseY/viewportY and auto-scroll to bottom, corrupting the user's position.
@@ -813,21 +837,23 @@ export class Pane {
     // Merge all queued chunks into a single Uint8Array using a reusable buffer
     const total = this.pendingBytes;
     let data: Uint8Array;
-    if (this.pendingWriteData.length === 1) {
-      data = this.pendingWriteData[0];
+    if (queueLen === 1) {
+      data = this.pendingWriteData[this.pendingHead]!;
     } else {
       // Grow merge buffer if needed (never shrinks — avoids repeated allocation)
       if (!this.mergeBuffer || this.mergeBuffer.length < total) {
         this.mergeBuffer = new Uint8Array(Math.max(total, (this.mergeBuffer?.length ?? 4096) * 2));
       }
       let offset = 0;
-      for (const chunk of this.pendingWriteData) {
+      for (let i = this.pendingHead; i < this.pendingWriteData.length; i++) {
+        const chunk = this.pendingWriteData[i]!;
         this.mergeBuffer.set(chunk, offset);
         offset += chunk.length;
       }
       data = new Uint8Array(this.mergeBuffer.buffer, 0, total);
     }
     this.pendingWriteData.length = 0;
+    this.pendingHead = 0;
     this.pendingBytes = 0;
 
     // Write with callback — restores scroll position AFTER xterm.js finishes
@@ -1178,6 +1204,8 @@ export class Pane {
       cancelAnimationFrame(this.writeRafId);
       this.writeRafId = 0;
       this.pendingWriteData.length = 0;
+      this.pendingHead = 0;
+      this.pendingBytes = 0;
     }
     // Dismiss any open paste confirm dialog for this pane
     this.pasteOverlay?.remove();
