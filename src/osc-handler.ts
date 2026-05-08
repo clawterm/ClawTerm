@@ -32,7 +32,14 @@ export function parseOsc9_2(data: string): OscNotificationEvent | null {
   let text = data.slice(2);
   if (!text) return null;
   if (text.length > OSC_NOTIFICATION_MAX_LEN) {
-    text = text.slice(0, OSC_NOTIFICATION_MAX_LEN) + "…";
+    // Don't split a UTF-16 surrogate pair at the cut boundary. An unpaired
+    // high surrogate is malformed UTF-16 and trips downstream encoders
+    // (toast textContent renders ⟨replacement⟩; @tauri-apps/plugin-notification
+    // round-trips through Rust and may error). (#492)
+    let cut = OSC_NOTIFICATION_MAX_LEN;
+    const code = text.charCodeAt(cut - 1);
+    if (code >= 0xd800 && code <= 0xdbff) cut--;
+    text = text.slice(0, cut) + "…";
   }
   return { text };
 }

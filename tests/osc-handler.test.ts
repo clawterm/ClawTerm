@@ -28,4 +28,18 @@ describe("parseOsc9_2", () => {
     expect(result!.text.length).toBeLessThanOrEqual(513);
     expect(result!.text.endsWith("…")).toBe(true);
   });
+
+  it("does not split a UTF-16 surrogate pair on truncation (#492)", () => {
+    // Pad to 511 chars, then place 🔥 (D83D DD25) so the cut at 512 lands
+    // between the high and low surrogate. The fix drops to 511 and slices.
+    const text = "a".repeat(511) + "🔥".repeat(50);
+    const result = parseOsc9_2(`2;${text}`);
+    expect(result).not.toBeNull();
+    // The resulting string must be valid UTF-16 (no unpaired surrogates).
+    // Round-trip through TextEncoder/Decoder fails on lone surrogates.
+    const round = new TextDecoder("utf-16le", { fatal: true }).decode(
+      new Uint16Array(Array.from(result!.text, (c) => c.charCodeAt(0))),
+    );
+    expect(round).toBe(result!.text);
+  });
 });
