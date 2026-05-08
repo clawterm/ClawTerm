@@ -1058,7 +1058,8 @@ body {
   background: var(--bg-elevated);
 }
 
-/* Split containers */
+/* Split containers — class is built as `split-container split-${direction}`
+   at runtime in tab.ts. Lay panes out by direction. */
 .split-container {
   display: flex;
   flex: 1;
@@ -1068,12 +1069,32 @@ body {
   contain: layout style;
 }
 
-/* Split dividers — transparent gap between pane boxes */
+.split-horizontal {
+  flex-direction: row;
+}
+
+.split-vertical {
+  flex-direction: column;
+}
+
+/* Split dividers — transparent gap between pane boxes. Direction-specific
+   dimensions/cursors live in the modifier classes below; constructed at
+   runtime as `split-divider split-divider-${direction}` in tab.ts. */
 .split-divider {
   flex-shrink: 0;
   z-index: 10;
   position: relative;
   background: transparent;
+}
+
+.split-divider-horizontal {
+  width: 6px;
+  cursor: col-resize;
+}
+
+.split-divider-vertical {
+  height: 6px;
+  cursor: row-resize;
 }
 
 /* Per-pane status footer — replaces global #status-bar (#348) */
