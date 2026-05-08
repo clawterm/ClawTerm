@@ -41,11 +41,3 @@ class PerfMetrics {
 }
 
 export const perfMetrics = new PerfMetrics();
-
-/** Time a synchronous function and record the result. */
-export function timed<T>(label: string, fn: () => T): T {
-  const start = performance.now();
-  const result = fn();
-  perfMetrics.record(label, performance.now() - start);
-  return result;
-}
