@@ -74,12 +74,14 @@ export class WebGLManager {
 
     if (!force) {
       const outputAge = Date.now() - this.getLastOutputAt();
-      if (outputAge < 300) {
+      // Defer 200ms longer than Pane.fit() (300ms) so the two reflow-heavy
+      // operations land on separate frames once output settles. (#460)
+      if (outputAge < 500) {
         if (!this.deferredTimer) {
           this.deferredTimer = setTimeout(() => {
             this.deferredTimer = null;
             this.activate();
-          }, 300);
+          }, 500);
         }
         return;
       }
