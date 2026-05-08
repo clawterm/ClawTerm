@@ -217,16 +217,25 @@ async function splitToBranch(
     // If the split failed (pane limit, PTY error), clean up the orphaned worktree
     if (panesAfter === paneCountBefore) {
       logger.warn("splitToBranch: split failed, cleaning up orphaned worktree");
-      invoke("unlock_worktree", { repoDir: repoRoot, worktreePath: result.worktreeDir })
-        .catch(() => {})
-        .then(() =>
-          invoke("remove_worktree", {
-            repoDir: repoRoot,
-            worktreePath: result.worktreeDir,
-            force: true,
-          }),
-        )
-        .catch((e) => logger.debug("Failed to clean orphaned worktree:", e));
+      await invoke("unlock_worktree", {
+        repoDir: repoRoot,
+        worktreePath: result.worktreeDir,
+      }).catch((e) => logger.debug("Failed to unlock orphaned worktree:", e));
+      try {
+        await invoke("remove_worktree", {
+          repoDir: repoRoot,
+          worktreePath: result.worktreeDir,
+          force: true,
+        });
+      } catch (e) {
+        logger.warn("Failed to clean orphaned worktree:", e);
+        showToast(
+          `Split failed; orphaned worktree at ${result.worktreeDir} — clean up manually`,
+          "error",
+          6000,
+        );
+        return;
+      }
       showToast("Failed to split — pane limit or PTY error", "error");
       return;
     }
