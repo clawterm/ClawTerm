@@ -94,7 +94,7 @@ The frontend calls this through `invokeWithTimeout("create_worktree", ..., 10000
 
 ## Locking
 
-After creation succeeds, the frontend immediately calls `invoke("lock_worktree", ...)`. This runs `git worktree lock --reason "In use by ClawTerm"` on the new worktree. The lock prevents `git worktree remove` (without `--force`) from succeeding — protection against an agent or script in another pane accidentally deleting the worktree someone else is editing.
+After creation succeeds, the frontend immediately calls `invoke("lock_worktree", ...)`. This runs `git worktree lock --reason "In use by Clawterm"` on the new worktree. The lock prevents `git worktree remove` (without `--force`) from succeeding — protection against an agent or script in another pane accidentally deleting the worktree someone else is editing.
 
 The lock is **released** in three places:
 

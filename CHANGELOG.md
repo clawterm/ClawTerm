@@ -45,7 +45,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Configurable project keybindings** — `nextProject` and `prevProject` shortcuts are now customizable in config.json alongside all other keybindings (#410)
 - **llms.txt** — added `/llms.txt` and `/llms-full.txt` for AI agent discoverability, making it easier for agents to understand the codebase (#409)
 - **Redesigned update dialog** — release notes now render as formatted HTML (headings, bold, bullet lists, inline code, linked PR numbers) instead of raw markdown; dialog uses a natural 500px-wide layout with scrollable release notes area (#411)
-- **Worktree lock protection** — worktrees are now locked via `git worktree lock` on creation, preventing agents or scripts from accidentally deleting another pane's worktree with `git worktree remove`; ClawTerm unlocks when the last pane using a worktree closes
+- **Worktree lock protection** — worktrees are now locked via `git worktree lock` on creation, preventing agents or scripts from accidentally deleting another pane's worktree with `git worktree remove`; Clawterm unlocks when the last pane using a worktree closes
 - **Linux builds** — release pipeline now produces `.deb` and `.AppImage` packages for Linux alongside macOS and Windows (#380)
 - **SHA256 checksums** — release artifacts now include published checksums for verifying download integrity (#382)
 

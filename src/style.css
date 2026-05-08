@@ -848,6 +848,20 @@ body {
   margin-bottom: var(--space-3);
 }
 
+.settings-repo-link {
+  display: inline-block;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-family: var(--font-mono);
+  font-size: var(--font-sm);
+  margin-bottom: var(--space-5);
+  transition: color var(--transition-speed);
+}
+.settings-repo-link:hover {
+  color: var(--text-primary);
+  text-decoration: underline;
+}
+
 .settings-config-row {
   display: flex;
   align-items: center;

@@ -2,6 +2,7 @@ import type { Config } from "./config";
 import { eventToBinding, isUnbound } from "./config";
 import { modLabel } from "./utils";
 import { manualCheckForUpdates } from "./updater";
+import { openUrl } from "@tauri-apps/plugin-opener";
 
 declare const __APP_VERSION__: string;
 
@@ -141,10 +142,29 @@ export function createSettingsPanel(opts: PanelOptions): ShortcutsPanel {
   aboutHeader.textContent = "Clawterm";
   panel.appendChild(aboutHeader);
 
+  const tagline = document.createElement("div");
+  tagline.className = "shortcuts-hint";
+  tagline.textContent = "A terminal for running many AI agents at once and keeping track of them.";
+  panel.appendChild(tagline);
+
   const version = document.createElement("div");
   version.className = "shortcuts-hint";
-  version.textContent = `Version ${__APP_VERSION__}`;
+  version.textContent = `Version ${__APP_VERSION__} · MIT License`;
   panel.appendChild(version);
+
+  const repoLink = document.createElement("a");
+  repoLink.className = "shortcuts-hint settings-repo-link";
+  repoLink.href = "https://github.com/clawterm/clawterm";
+  repoLink.textContent = "github.com/clawterm/clawterm";
+  repoLink.addEventListener(
+    "click",
+    (e) => {
+      e.preventDefault();
+      openUrl(repoLink.href).catch(() => {});
+    },
+    { signal: panelSignal },
+  );
+  panel.appendChild(repoLink);
 
   const configRow = document.createElement("div");
   configRow.className = "settings-config-row";

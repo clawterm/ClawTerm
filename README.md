@@ -43,7 +43,7 @@ Or grab the DMG / EXE / `.deb` / `.AppImage` manually from the [latest release](
 
 ## Where worktrees live
 
-By default, ClawTerm creates new git worktrees in a sibling directory next to your repo, namespaced by repo name:
+By default, Clawterm creates new git worktrees in a sibling directory next to your repo, namespaced by repo name:
 
 ```
 ~/Code/
