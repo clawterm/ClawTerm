@@ -20,4 +20,12 @@ describe("parseOsc9_2", () => {
     expect(parseOsc9_2("4;1;50")).toBeNull();
     expect(parseOsc9_2("")).toBeNull();
   });
+
+  it("truncates oversized notification text", () => {
+    const huge = "x".repeat(2000);
+    const result = parseOsc9_2(`2;${huge}`);
+    expect(result).not.toBeNull();
+    expect(result!.text.length).toBeLessThanOrEqual(513);
+    expect(result!.text.endsWith("…")).toBe(true);
+  });
 });
