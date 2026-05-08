@@ -155,6 +155,10 @@ export class Pane {
   onTerminalTitle: ((title: string) => void) | null = null;
   /** Fires when an OSC 9;2 notification sequence is received — agent needs attention */
   onOscNotification: ((event: OscNotificationEvent) => void) | null = null;
+  /** Fires on every PTY data chunk — used by the central poll loop to wake
+   *  out of idle mode. The handler is expected to early-return cheaply when
+   *  no wake-up is needed, since this fires at PTY-data rate. (#456) */
+  onActivity: (() => void) | null = null;
   onFocus: (() => void) | null = null;
 
   constructor(config: Config, keyHandler?: KeyHandler, cwd?: string) {
@@ -511,6 +515,7 @@ export class Pane {
     this.pty.onData((data: Uint8Array | number[]) => {
       if (!this.disposed) {
         this.lastOutputAt = Date.now();
+        this.onActivity?.();
         const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
 
         // Feed the output analyzer immediately (no batching needed — it's

@@ -90,6 +90,10 @@ export class Tab {
   onTitleChange: ((title: string) => void) | null = null;
   onNeedsAttention: (() => void) | null = null;
   onOutputEvent: ((event: OutputEvent) => void) | null = null;
+  /** Fires on PTY activity for any pane in this tab — forwarded to the
+   *  central poll loop's wake() so adaptive idle mode can break out
+   *  immediately. Expected to be cheap when no wake-up is needed. (#456) */
+  onActivity: (() => void) | null = null;
   /** Fires on any status change that needs a sidebar re-render. */
   onStateChange: (() => void) | null = null;
   /** Called when a pane is closed, with worktree info for cleanup */
@@ -142,6 +146,10 @@ export class Tab {
 
     pane.onOutputEvent = (event: OutputEvent) => {
       this.handleOutputEvent(event);
+    };
+
+    pane.onActivity = () => {
+      this.onActivity?.();
     };
 
     pane.onTerminalTitle = () => {

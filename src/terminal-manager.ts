@@ -66,7 +66,14 @@ export class TerminalManager {
   /** rAF ID for coalesced render — multiple scheduleRender() calls within
    *  the same frame are batched into a single renderTabList() + updateStatusBar(). */
   private renderRaf = 0;
-  private pollTimer: ReturnType<typeof setInterval> | null = null;
+  private pollTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Number of consecutive poll cycles where every pane was idle. Once this
+   *  exceeds IDLE_STREAK_THRESHOLD the loop drops to IDLE_INTERVAL_MS;
+   *  any activity signal (PTY data, tab switch, focus regain) calls wake()
+   *  which resets the streak and resumes the fast cadence. (#456) */
+  private idleStreak = 0;
+  private static readonly IDLE_STREAK_THRESHOLD = 10;
+  private static readonly IDLE_INTERVAL_MS = 10_000;
   private unlistenFocus: (() => void) | null = null;
   private lastTabSnapshot = "";
   private sessionTimer: ReturnType<typeof setTimeout> | null = null;
@@ -585,6 +592,9 @@ export class TerminalManager {
               tab.focus();
             });
           }
+          // Window came back to focus — wake the poll loop so the user
+          // sees fresh state instead of waiting on the idle interval. (#456)
+          this.wake();
         }
       })
       .then((unlisten) => {
@@ -724,6 +734,10 @@ export class TerminalManager {
 
     tab.onOutputEvent = (event: OutputEvent) => {
       this.handleTabOutputEvent(id, tab, event);
+    };
+
+    tab.onActivity = () => {
+      this.wake();
     };
 
     tab.onPaneClose = (pane) => {
@@ -967,6 +981,9 @@ export class TerminalManager {
     this.renderTabList();
     this.updateStatusBar();
     this.persistSession();
+    // User just switched tabs — break out of idle mode so footer / sidebar
+    // for the newly active tab refresh on the next tick. (#456)
+    this.wake();
   }
 
   private nextTab() {
@@ -2048,7 +2065,7 @@ export class TerminalManager {
 
     // Restart poll timer with potentially new interval values
     if (this.pollTimer) {
-      clearInterval(this.pollTimer);
+      clearTimeout(this.pollTimer);
       this.pollTimer = null;
     }
     this.startCentralPoll();
@@ -2056,67 +2073,107 @@ export class TerminalManager {
     this.renderTabList();
   }
 
+  private pollCycleCount = 0;
+
   private startCentralPoll() {
+    this.pollCycleCount = 0;
+    this.idleStreak = 0;
+    this.scheduleNextPoll(this.config.advanced.pollIntervalMs);
+  }
+
+  /** Schedule the next central poll tick. Uses setTimeout (not setInterval)
+   *  so the cadence can be dynamically adjusted between fg and idle
+   *  intervals based on whether anything is happening. (#456) */
+  private scheduleNextPoll(delayMs: number) {
+    if (this.pollTimer) clearTimeout(this.pollTimer);
+    this.pollTimer = setTimeout(() => this.pollTick(), delayMs);
+  }
+
+  /** Wake the central poll loop now. Called when an activity signal arrives
+   *  (PTY data, OSC notification, terminal title change, tab switch, window
+   *  focus regain) so the user doesn't wait the full IDLE_INTERVAL_MS to see
+   *  state catch up after a quiet period. Cheap when not idle — early-returns
+   *  before touching the timer. (#456) */
+  wake(): void {
+    if (this.idleStreak === 0) return;
+    this.idleStreak = 0;
+    this.scheduleNextPoll(0);
+  }
+
+  private async pollTick() {
+    if (this.quitting) return;
+    this.pollCycleCount++;
     const fgInterval = this.config.advanced.pollIntervalMs;
     const bgInterval = this.config.advanced.backgroundPollIntervalMs;
-    let pollCycleCount = 0;
 
-    this.pollTimer = setInterval(async () => {
-      if (this.quitting) return;
-      pollCycleCount++;
+    // Snapshot active tab ID to avoid race if user switches mid-loop
+    const activeId = this.activeTabId;
 
-      // Snapshot active tab ID to avoid race if user switches mid-loop
-      const activeId = this.activeTabId;
+    // Stagger background polls across the bgInterval window. The old
+    // "poll every bg tab once every 5s" triggered a simultaneous IPC
+    // wave — N tabs each spawning a git-status subprocess at the same
+    // instant, which manifested as a ~5s-cadence UI freeze as the
+    // main thread waited on the Promise.all/renderTabList burst (#434).
+    const bgIds: string[] = [];
+    for (const id of this.tabs.keys()) {
+      if (id !== activeId) bgIds.push(id);
+    }
+    const slots = Math.max(1, Math.round(bgInterval / fgInterval));
+    const perSlot = bgIds.length > 0 ? Math.max(1, Math.ceil(bgIds.length / slots)) : 0;
+    const slot = (this.pollCycleCount - 1) % slots;
+    const sliceStart = slot * perSlot;
+    const sliceEnd = Math.min(sliceStart + perSlot, bgIds.length);
 
-      // Stagger background polls across the bgInterval window. The old
-      // "poll every bg tab once every 5s" triggered a simultaneous IPC
-      // wave — N tabs each spawning a git-status subprocess at the same
-      // instant, which manifested as a ~5s-cadence UI freeze as the
-      // main thread waited on the Promise.all/renderTabList burst (#434).
-      // New behaviour: split the bgInterval window into `slots` fg-cycle
-      // slots (5 when bgInterval=5s and fgInterval=1s) and poll a fixed
-      // slice of bg tabs per slot. Each bg tab is polled once per full
-      // window — same cadence as before, smooth load profile.
-      const bgIds: string[] = [];
-      for (const id of this.tabs.keys()) {
-        if (id !== activeId) bgIds.push(id);
+    logger.debug(
+      `[centralPoll] cycle=${this.pollCycleCount} tabs=${this.tabs.size} ` +
+        `slot=${slot}/${slots} bgSlice=${sliceStart}..${sliceEnd}/${bgIds.length} ` +
+        `active=${activeId} idleStreak=${this.idleStreak}`,
+    );
+
+    // Poll tabs concurrently so one stuck IPC call can't block everything.
+    // Active-tab pollProcessInfo runs with high priority so its IPC slots
+    // jump ahead of bg-slice work in the pollSemaphore queue. (#459)
+    const polls: Promise<void>[] = [];
+    if (activeId) {
+      const activeTab = this.tabs.get(activeId);
+      if (activeTab) {
+        polls.push(activeTab.pollProcessInfo("high").catch((e) => logger.debug("[poll] tab error:", e)));
       }
-      const slots = Math.max(1, Math.round(bgInterval / fgInterval));
-      const perSlot = bgIds.length > 0 ? Math.max(1, Math.ceil(bgIds.length / slots)) : 0;
-      const slot = (pollCycleCount - 1) % slots;
-      const sliceStart = slot * perSlot;
-      const sliceEnd = Math.min(sliceStart + perSlot, bgIds.length);
+    }
+    for (let i = sliceStart; i < sliceEnd; i++) {
+      const tab = this.tabs.get(bgIds[i]);
+      if (tab) {
+        polls.push(tab.pollProcessInfo("low").catch((e) => logger.debug("[poll] tab error:", e)));
+      }
+    }
+    await Promise.all(polls);
 
-      logger.debug(
-        `[centralPoll] cycle=${pollCycleCount} tabs=${this.tabs.size} ` +
-          `slot=${slot}/${slots} bgSlice=${sliceStart}..${sliceEnd}/${bgIds.length} active=${activeId}`,
-      );
+    const snapshot = this.computeTabSnapshot();
+    if (snapshot !== this.lastTabSnapshot) {
+      this.lastTabSnapshot = snapshot;
+      this.renderTabList();
+    }
+    this.updateStatusBar();
 
-      // Poll tabs concurrently so one stuck IPC call can't block everything.
-      // Active-tab pollProcessInfo runs with high priority so its IPC slots
-      // jump ahead of bg-slice work in the pollSemaphore queue. (#459)
-      const polls: Promise<void>[] = [];
-      if (activeId) {
-        const activeTab = this.tabs.get(activeId);
-        if (activeTab) {
-          polls.push(activeTab.pollProcessInfo("high").catch((e) => logger.debug("[poll] tab error:", e)));
+    // After polls, decide whether the app is "all idle" — every pane in
+    // every tab has its foreground process group equal to the shell PID.
+    // pollPane sets pane.state.isIdle on each cycle.
+    let anyActive = false;
+    for (const tab of this.tabs.values()) {
+      for (const pane of tab.getPanes()) {
+        if (pane.state.isIdle === false) {
+          anyActive = true;
+          break;
         }
       }
-      for (let i = sliceStart; i < sliceEnd; i++) {
-        const tab = this.tabs.get(bgIds[i]);
-        if (tab) {
-          polls.push(tab.pollProcessInfo("low").catch((e) => logger.debug("[poll] tab error:", e)));
-        }
-      }
-      await Promise.all(polls);
+      if (anyActive) break;
+    }
+    if (anyActive) this.idleStreak = 0;
+    else this.idleStreak++;
 
-      const snapshot = this.computeTabSnapshot();
-      if (snapshot !== this.lastTabSnapshot) {
-        this.lastTabSnapshot = snapshot;
-        this.renderTabList();
-      }
-      this.updateStatusBar();
-    }, fgInterval);
+    if (this.quitting) return;
+    const inIdleMode = this.idleStreak >= TerminalManager.IDLE_STREAK_THRESHOLD;
+    this.scheduleNextPoll(inIdleMode ? TerminalManager.IDLE_INTERVAL_MS : fgInterval);
   }
 
   private computeTabSnapshot(): string {
@@ -2146,7 +2203,7 @@ export class TerminalManager {
     // Remove all document-level event listeners registered with AbortController
     this.ac.abort();
     if (this.pollTimer) {
-      clearInterval(this.pollTimer);
+      clearTimeout(this.pollTimer);
       this.pollTimer = null;
     }
     if (this.sessionTimer) {
