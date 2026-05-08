@@ -49,11 +49,3 @@ export function timed<T>(label: string, fn: () => T): T {
   perfMetrics.record(label, performance.now() - start);
   return result;
 }
-
-/** Time an async function and record the result. */
-export async function timedAsync<T>(label: string, fn: () => Promise<T>): Promise<T> {
-  const start = performance.now();
-  const result = await fn();
-  perfMetrics.record(label, performance.now() - start);
-  return result;
-}
