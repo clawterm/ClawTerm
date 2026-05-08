@@ -11,12 +11,12 @@ export function showPasteConfirm(
   terminal: Terminal,
   abortSignal: AbortSignal,
   onDismiss: () => void,
-): void {
+): HTMLDivElement | null {
   // Reject extremely large pastes to avoid freezing the UI
   const MAX_PASTE_BYTES = 5_000_000;
   if (text.length > MAX_PASTE_BYTES) {
     showToast("Paste too large (>5MB)", "error");
-    return;
+    return null;
   }
 
   const lineCount = text.split("\n").length;
@@ -109,5 +109,5 @@ export function showPasteConfirm(
 
   cancelBtn.focus();
 
-  return overlay as unknown as void;
+  return overlay;
 }

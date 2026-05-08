@@ -969,7 +969,7 @@ export class Pane {
 
   private showPasteConfirm(text: string) {
     this.pasteOverlay?.remove();
-    showPasteDialog(text, this.terminal, this.ac.signal, () => {
+    this.pasteOverlay = showPasteDialog(text, this.terminal, this.ac.signal, () => {
       this.pasteOverlay = null;
     });
   }
