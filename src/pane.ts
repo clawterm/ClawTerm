@@ -100,6 +100,15 @@ export class Pane {
   private pendingBytes = 0;
   /** When the dead prefix grows past this, compact in one splice. */
   private static readonly PENDING_COMPACT_THRESHOLD = 256;
+  /** Max bytes to write to xterm.js per animation frame.  Caps the parse-pass
+   *  spike when a hidden tab with a large accumulated backlog becomes visible
+   *  — without this, the entire 128KB hits xterm.js in one synchronous
+   *  terminal.write() and drops a frame at the moment of tab focus. (#467) */
+  private static readonly FLUSH_CHUNK_BYTES = 32 * 1024;
+  /** Snapshot of distance-from-bottom taken at the start of a (possibly
+   *  multi-frame) flush sequence.  Held across chunks so every chunk's
+   *  scroll-restore returns the user to their pre-flush position. (#467) */
+  private flushSavedDistance: number | null = null;
   /** Reusable merge buffer for flushWrites() — grows as needed, never shrinks.
    *  Avoids allocating a new Uint8Array on every animation frame. */
   private mergeBuffer: Uint8Array | null = null;
@@ -818,54 +827,84 @@ export class Pane {
     }
   }
 
-  /** Flush all queued PTY writes in a single terminal.write() call. */
+  /** Flush queued PTY writes to xterm.js, capped at FLUSH_CHUNK_BYTES per
+   *  frame.  When a tab becomes visible with a large accumulated backlog,
+   *  the flush is split across multiple animation frames so the parse pass
+   *  can't drop a frame at the moment of focus. (#467) */
   private flushWrites() {
     this.writeRafId = 0;
-    const queueLen = this.pendingWriteData.length - this.pendingHead;
-    if (this.disposed || queueLen === 0) return;
+    const totalQueued = this.pendingWriteData.length - this.pendingHead;
+    if (this.disposed || totalQueued === 0) {
+      this.flushSavedDistance = null;
+      return;
+    }
 
-    // Snapshot scroll state BEFORE the write — terminal.write() will mutate
-    // baseY/viewportY and auto-scroll to bottom, corrupting the user's position.
-    // Use distance-from-bottom because the write itself can grow the buffer
-    // and shift baseY underneath any saved viewportY index. (#419)
-    const buf = this.terminal.buffer.active;
-    const savedDistance =
-      this.scrollLocked && this.lockedDistanceFromBottom !== null
-        ? this.lockedDistanceFromBottom
-        : Math.max(0, buf.baseY - buf.viewportY);
+    // Snapshot scroll state ONCE per flush sequence (held across chunks).
+    // Use distance-from-bottom because the write grows baseY underneath
+    // any saved viewportY index. (#419)
+    if (this.flushSavedDistance === null) {
+      const buf = this.terminal.buffer.active;
+      this.flushSavedDistance =
+        this.scrollLocked && this.lockedDistanceFromBottom !== null
+          ? this.lockedDistanceFromBottom
+          : Math.max(0, buf.baseY - buf.viewportY);
+    }
+    const savedDistance = this.flushSavedDistance;
 
-    // Merge all queued chunks into a single Uint8Array using a reusable buffer
-    const total = this.pendingBytes;
+    // Decide how many chunks to consume this frame: up to FLUSH_CHUNK_BYTES,
+    // always at least one (so we make forward progress even on a giant chunk).
+    let bytesThisFrame = 0;
+    let consumeCount = 0;
+    for (let i = this.pendingHead; i < this.pendingWriteData.length; i++) {
+      const c = this.pendingWriteData[i]!;
+      if (consumeCount > 0 && bytesThisFrame + c.length > Pane.FLUSH_CHUNK_BYTES) break;
+      bytesThisFrame += c.length;
+      consumeCount++;
+    }
+
+    // Build the chunk to write this frame.
     let data: Uint8Array;
-    if (queueLen === 1) {
+    if (consumeCount === 1) {
       data = this.pendingWriteData[this.pendingHead]!;
     } else {
-      // Grow merge buffer if needed (never shrinks — avoids repeated allocation)
-      if (!this.mergeBuffer || this.mergeBuffer.length < total) {
-        this.mergeBuffer = new Uint8Array(Math.max(total, (this.mergeBuffer?.length ?? 4096) * 2));
+      if (!this.mergeBuffer || this.mergeBuffer.length < bytesThisFrame) {
+        this.mergeBuffer = new Uint8Array(Math.max(bytesThisFrame, (this.mergeBuffer?.length ?? 4096) * 2));
       }
       let offset = 0;
-      for (let i = this.pendingHead; i < this.pendingWriteData.length; i++) {
-        const chunk = this.pendingWriteData[i]!;
-        this.mergeBuffer.set(chunk, offset);
-        offset += chunk.length;
+      for (let i = this.pendingHead; i < this.pendingHead + consumeCount; i++) {
+        const c = this.pendingWriteData[i]!;
+        this.mergeBuffer.set(c, offset);
+        offset += c.length;
       }
-      data = new Uint8Array(this.mergeBuffer.buffer, 0, total);
+      data = new Uint8Array(this.mergeBuffer.buffer, 0, bytesThisFrame);
     }
-    this.pendingWriteData.length = 0;
-    this.pendingHead = 0;
-    this.pendingBytes = 0;
+
+    // Advance head, null out consumed slots so the chunks can be GC'd, and
+    // decrement byte accounting.
+    for (let i = this.pendingHead; i < this.pendingHead + consumeCount; i++) {
+      this.pendingWriteData[i] = undefined;
+    }
+    this.pendingHead += consumeCount;
+    this.pendingBytes -= bytesThisFrame;
+    const moreRemaining = this.pendingWriteData.length - this.pendingHead > 0;
+
+    // Compact when the queue is fully drained — keeps the array bounded
+    // without doing splice work on every flush.
+    if (!moreRemaining) {
+      this.pendingWriteData.length = 0;
+      this.pendingHead = 0;
+      this.pendingBytes = 0;
+    }
 
     // Write with callback — restores scroll position AFTER xterm.js finishes
     // parsing and updating baseY, preventing the viewport from jumping. (#257)
-    // When the user has scrolled up, this maintains their relative distance
-    // from bottom so new output doesn't drag them along.
     this.terminal.write(data, () => {
       if (this.disposed) return;
 
-      // Restore scroll position. Three inputs:
-      //   savedDistance   — pre-write snapshot (user was already scrolled up).
-      //   liveDistance    — post-write distance (reflects any wheel scroll
+      // Restore scroll position on every chunk so a user who is scrolled up
+      // doesn't see their viewport snap to the bottom mid-flush.
+      //   savedDistance   — pre-flush snapshot (held across all chunks).
+      //   liveDistance    — current distance (reflects any wheel scroll
       //                     that committed during the write).
       //   userScrolledUp  — set synchronously by the wheel handler for
       //                     upward scrolls; survives xterm's auto-follow
@@ -884,6 +923,16 @@ export class Pane {
         this.fittingNow = false;
       }
 
+      if (moreRemaining) {
+        // Schedule the next chunk.
+        if (!this.writeRafId) {
+          this.writeRafId = requestAnimationFrame(() => this.flushWrites());
+        }
+        return;
+      }
+
+      // Final chunk — drop the saved distance and surface the scroll pill.
+      this.flushSavedDistance = null;
       if (this.isScrolledUp) {
         this.showScrollPill("new-output");
       }
@@ -1206,6 +1255,7 @@ export class Pane {
       this.pendingWriteData.length = 0;
       this.pendingHead = 0;
       this.pendingBytes = 0;
+      this.flushSavedDistance = null;
     }
     // Dismiss any open paste confirm dialog for this pane
     this.pasteOverlay?.remove();
