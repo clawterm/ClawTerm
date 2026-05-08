@@ -24,7 +24,7 @@ import { createProject, type Project } from "./project";
 import { createSettingsPanel } from "./shortcuts-panel";
 import { manualCheckForUpdates } from "./updater";
 import { showCommandPalette, type PaletteCommand } from "./command-palette";
-import { createKeyHandler } from "./keybinding-handler";
+import { createKeyHandler, type KeybindingActions } from "./keybinding-handler";
 import { TabRenderer } from "./tab-renderer";
 import { perfMetrics } from "./perf";
 
@@ -79,6 +79,7 @@ export class TerminalManager {
   private creatingTab = false;
   private quitting = false;
   private handleKey!: (e: KeyboardEvent) => boolean;
+  private menuActions!: KeybindingActions;
   private closedTabStack: { cwd: string; title?: string }[] = [];
   private workspacePanel!: WorkspacePanel;
   /** Debounced config write — coalesces rapid changes (zoom, sidebar drag) */
@@ -187,7 +188,7 @@ export class TerminalManager {
       },
     });
 
-    this.handleKey = createKeyHandler(() => this.config, {
+    const actions: KeybindingActions = {
       createTab: () => this.createTab(),
       closeActiveTab: () => {
         if (this.activeTabId) this.closeTab(this.activeTabId);
@@ -233,7 +234,10 @@ export class TerminalManager {
       prevProject: () =>
         this.switchToProject((this.activeProjectIndex - 1 + this.projects.length) % this.projects.length),
       newProject: () => this.createNewProject(),
-    });
+    };
+    this.handleKey = createKeyHandler(() => this.config, actions);
+    this.menuActions = actions;
+    if (isMac) this.setupNativeMenu();
 
     this.workspacePanel = new WorkspacePanel({
       switchToTab: (id) => this.switchToTab(id),
@@ -1046,6 +1050,109 @@ export class TerminalManager {
     // Interpret escape sequences like \n
     const resolved = text.replace(/\\n/g, "\n").replace(/\\t/g, "\t");
     tab.writeToPty(resolved);
+  }
+
+  /** Listen for macOS menu bar events emitted from menu.rs (#487).
+   *  Dispatches into the same KeybindingActions surface as the keybinding
+   *  handler and command palette so all three input paths stay in sync. */
+  private async setupNativeMenu() {
+    const { listen } = await import("@tauri-apps/api/event");
+    listen<string>("menu-action", (e) => this.dispatchMenuAction(e.payload)).catch((err) =>
+      logger.debug("menu-action listen failed:", err),
+    );
+  }
+
+  private dispatchMenuAction(id: string): void {
+    const a = this.menuActions;
+    switch (id) {
+      case "newTab":
+        a.createTab();
+        return;
+      case "closeActiveTab":
+        a.closeActiveTab();
+        return;
+      case "nextTab":
+        a.nextTab();
+        return;
+      case "prevTab":
+        a.prevTab();
+        return;
+      case "restoreClosedTab":
+        a.restoreClosedTab();
+        return;
+      case "cycleAttentionTabs":
+        a.cycleAttentionTabs();
+        return;
+      case "toggleSearch":
+        a.toggleSearch();
+        return;
+      case "showQuickSwitch":
+        a.showQuickSwitch();
+        return;
+      case "openCommandPalette":
+        a.openCommandPalette();
+        return;
+      case "splitHorizontal":
+        a.splitHorizontal();
+        return;
+      case "splitVertical":
+        a.splitVertical();
+        return;
+      case "closeActivePane":
+        a.closeActivePane();
+        return;
+      case "focusNextPane":
+        a.focusNextPane();
+        return;
+      case "focusPrevPane":
+        a.focusPrevPane();
+        return;
+      case "zoomIn":
+        a.zoomIn();
+        return;
+      case "zoomOut":
+        a.zoomOut();
+        return;
+      case "zoomReset":
+        a.zoomReset();
+        return;
+      case "newWorktreeTab":
+        a.openWorktreeDialog();
+        return;
+      case "toggleWorkspacePanel":
+        a.toggleWorkspacePanel();
+        return;
+      case "jumpToBranch":
+        a.jumpToBranch();
+        return;
+      case "newProject":
+        a.newProject();
+        return;
+      case "nextProject":
+        a.nextProject();
+        return;
+      case "prevProject":
+        a.prevProject();
+        return;
+      case "reloadConfig":
+        a.reloadConfig();
+        return;
+      case "toggleSettings":
+      case "showShortcuts":
+        this.toggleSettingsPanel();
+        return;
+      case "openConfigFile":
+        this.openConfigFile();
+        return;
+      case "checkForUpdates":
+        manualCheckForUpdates();
+        return;
+      case "about":
+        showToast(`Clawterm v${__APP_VERSION__}`, "info");
+        return;
+      default:
+        logger.debug("Unhandled menu-action:", id);
+    }
   }
 
   private toggleSettingsPanel() {

@@ -1,4 +1,6 @@
 mod git_info;
+#[cfg(target_os = "macos")]
+mod menu;
 mod process_info;
 mod project_info;
 mod server_check;
@@ -266,6 +268,18 @@ fn main() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())
+        .setup(|_app| {
+            #[cfg(target_os = "macos")]
+            {
+                let handle = _app.handle().clone();
+                menu::build_and_set(&handle)?;
+            }
+            Ok(())
+        })
+        .on_menu_event(|_app, _event| {
+            #[cfg(target_os = "macos")]
+            menu::on_menu_event(_app, _event.id().as_ref());
+        })
         .invoke_handler(tauri::generate_handler![
             read_config,
             write_config,
