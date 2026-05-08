@@ -90,39 +90,6 @@ fn clear_session() -> Result<(), String> {
     }
 }
 
-#[tauri::command]
-fn list_custom_themes() -> Result<Vec<(String, String)>, String> {
-    let dir = clawterm_dir().join("themes");
-    if !dir.is_dir() {
-        return Ok(Vec::new());
-    }
-    let mut themes = Vec::new();
-    let entries = fs::read_dir(&dir).map_err(|e| e.to_string())?;
-    for entry in entries {
-        let entry = entry.map_err(|e| e.to_string())?;
-        let path = entry.path();
-        if path.extension().and_then(|e| e.to_str()) == Some("json") {
-            let name = path
-                .file_stem()
-                .and_then(|s| s.to_str())
-                .unwrap_or("unknown")
-                .to_string();
-            let contents = fs::read_to_string(&path).map_err(|e| e.to_string())?;
-            themes.push((name, contents));
-        }
-    }
-    themes.sort_by(|a, b| a.0.cmp(&b.0));
-    Ok(themes)
-}
-
-#[tauri::command]
-fn save_custom_theme(name: String, contents: String) -> Result<(), String> {
-    let dir = clawterm_dir().join("themes");
-    fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
-    let path = dir.join(format!("{}.json", name));
-    write_private(&path, &contents)
-}
-
 /// Set up the Claude Code status line script and configure settings.json
 #[tauri::command]
 fn setup_claude_statusline() -> Result<(), String> {
@@ -177,17 +144,6 @@ echo "$input" > "$dir/$PPID.json"
     }
 
     Ok(())
-}
-
-/// Read Claude Code status data for a given shell PID
-#[tauri::command]
-fn read_claude_status(pid: u32) -> Result<Option<String>, String> {
-    let path = format!("/tmp/clawterm-status/{}.json", pid);
-    match fs::read_to_string(&path) {
-        Ok(contents) => Ok(Some(contents)),
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
-        Err(e) => Err(e.to_string()),
-    }
 }
 
 /// Detect which editors are available on the system by checking for their CLIs on PATH.
@@ -313,8 +269,6 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             read_config,
             write_config,
-            list_custom_themes,
-            save_custom_theme,
             read_session,
             write_session,
             clear_session,
@@ -324,13 +278,11 @@ fn main() {
             git_info::get_git_branch,
             git_info::get_git_status,
             server_check::check_port,
-            worktree::list_worktrees,
             worktree::create_worktree,
             worktree::remove_worktree,
             worktree::lock_worktree,
             worktree::unlock_worktree,
             worktree::list_branches,
-            worktree::prune_worktrees,
             worktree::find_repo_root,
             detect_editors,
             open_in_editor,
@@ -338,7 +290,6 @@ fn main() {
             has_legacy_in_repo_worktrees,
             validate_shell,
             setup_claude_statusline,
-            read_claude_status,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

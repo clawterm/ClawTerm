@@ -2,12 +2,8 @@ use serde::Serialize;
 use std::path::Path;
 use std::process::Command;
 
-#[derive(Serialize)]
-pub struct WorktreeInfo {
-    pub path: String,
-    pub branch: String,
-    pub commit: String,
-    pub is_main: bool,
+struct WorktreeInfo {
+    branch: String,
 }
 
 #[derive(Serialize)]
@@ -19,9 +15,9 @@ pub struct BranchInfo {
     pub has_worktree: bool,
 }
 
-/// List all worktrees for a repository.
-#[tauri::command]
-pub fn list_worktrees(repo_dir: String) -> Result<Vec<WorktreeInfo>, String> {
+/// List worktree branches for a repo. Used internally by list_branches to mark
+/// which branches already have a worktree checked out.
+fn list_worktrees(repo_dir: String) -> Result<Vec<WorktreeInfo>, String> {
     let output = Command::new("git")
         .args(["worktree", "list", "--porcelain"])
         .current_dir(&repo_dir)
@@ -34,42 +30,22 @@ pub fn list_worktrees(repo_dir: String) -> Result<Vec<WorktreeInfo>, String> {
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let mut worktrees = Vec::new();
-    let mut path = String::new();
-    let mut commit = String::new();
     let mut branch = String::new();
-    let mut is_first = true;
+    let mut path_seen = false;
 
     for line in stdout.lines() {
-        if let Some(p) = line.strip_prefix("worktree ") {
-            // Save previous entry
-            if !path.is_empty() {
-                worktrees.push(WorktreeInfo {
-                    path: path.clone(),
-                    branch: branch.clone(),
-                    commit: commit.clone(),
-                    is_main: is_first,
-                });
-                is_first = false;
+        if line.starts_with("worktree ") {
+            if path_seen {
+                worktrees.push(WorktreeInfo { branch: branch.clone() });
             }
-            path = p.to_string();
+            path_seen = true;
             branch = String::new();
-            commit = String::new();
-        } else if let Some(h) = line.strip_prefix("HEAD ") {
-            commit = if h.len() >= 8 { h[..8].to_string() } else { h.to_string() };
         } else if let Some(b) = line.strip_prefix("branch refs/heads/") {
             branch = b.to_string();
-        } else if line == "detached" {
-            branch = format!("({})", &commit);
         }
     }
-    // Push last entry
-    if !path.is_empty() {
-        worktrees.push(WorktreeInfo {
-            path,
-            branch,
-            commit,
-            is_main: is_first,
-        });
+    if path_seen {
+        worktrees.push(WorktreeInfo { branch });
     }
 
     Ok(worktrees)
@@ -291,21 +267,6 @@ pub fn unlock_worktree(repo_dir: String, worktree_path: String) -> Result<(), St
             return Ok(());
         }
         return Err(stderr);
-    }
-    Ok(())
-}
-
-/// Prune stale worktree references.
-#[tauri::command]
-pub fn prune_worktrees(repo_dir: String) -> Result<(), String> {
-    let output = Command::new("git")
-        .args(["worktree", "prune"])
-        .current_dir(&repo_dir)
-        .output()
-        .map_err(|e| format!("git worktree prune failed: {}", e))?;
-
-    if !output.status.success() {
-        return Err(String::from_utf8_lossy(&output.stderr).to_string());
     }
     Ok(())
 }
