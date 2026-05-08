@@ -91,12 +91,26 @@ pub struct GitStatus {
 /// Results are cached per-directory: successes with a 3s TTL, errors with
 /// a 10s TTL (prevents repeated subprocess spawns for broken directories).
 ///
-/// Async Tauri command — the entire body (canonicalize, cache lookup,
-/// subprocess on miss, cache insert) runs on the blocking thread pool so
-/// the Tauri command worker is free to service other IPC while a slow
-/// `git status` (NFS, large index) is in flight. (#457)
+/// Cache hits resolve synchronously on the calling thread — the lookup is
+/// microseconds and the steady-polling case is dominated by hits. Misses
+/// dispatch to the blocking pool so the Tauri command worker is free
+/// while git runs. (#457)
 #[tauri::command]
 pub async fn get_git_status(dir: String) -> Result<GitStatus, String> {
+    if let Ok(path) = std::fs::canonicalize(&dir) {
+        if let Ok(cache) = GIT_CACHE.lock() {
+            if let Some(entry) = cache.get(&path) {
+                let ttl = if entry.result.is_ok() {
+                    GIT_CACHE_TTL
+                } else {
+                    GIT_ERROR_CACHE_TTL
+                };
+                if entry.fetched_at.elapsed() < ttl {
+                    return entry.result.clone();
+                }
+            }
+        }
+    }
     tauri::async_runtime::spawn_blocking(move || get_git_status_sync(dir))
         .await
         .map_err(|e| format!("git task join error: {}", e))?

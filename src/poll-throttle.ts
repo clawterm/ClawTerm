@@ -15,12 +15,38 @@
 
 const MAX_CONCURRENT = 3;
 
+export type PollPriority = "high" | "low";
+
+/** Head-pointer FIFO — Array.shift() is O(n) on the live entries; with
+ *  many panes parked in the queue (large multi-tab setup, slow git on
+ *  every poll cycle) the dispatch itself becomes the bottleneck. */
+class WaiterQueue {
+  private items: (() => void)[] = [];
+  private head = 0;
+
+  push(item: () => void): void {
+    this.items.push(item);
+  }
+
+  shift(): (() => void) | undefined {
+    if (this.head >= this.items.length) return undefined;
+    const item = this.items[this.head];
+    this.items[this.head] = undefined as unknown as () => void;
+    this.head++;
+    if (this.head > 32 && this.head * 2 > this.items.length) {
+      this.items.splice(0, this.head);
+      this.head = 0;
+    }
+    return item;
+  }
+}
+
 class PollSemaphore {
   private inFlight = 0;
-  private highQ: Array<() => void> = [];
-  private lowQ: Array<() => void> = [];
+  private highQ = new WaiterQueue();
+  private lowQ = new WaiterQueue();
 
-  async acquire(priority: "high" | "low"): Promise<void> {
+  async acquire(priority: PollPriority): Promise<void> {
     if (this.inFlight < MAX_CONCURRENT) {
       this.inFlight++;
       return;
@@ -41,7 +67,7 @@ class PollSemaphore {
     if (next) next();
   }
 
-  async withSlot<T>(priority: "high" | "low", fn: () => Promise<T>): Promise<T> {
+  async withSlot<T>(priority: PollPriority, fn: () => Promise<T>): Promise<T> {
     await this.acquire(priority);
     try {
       return await fn();

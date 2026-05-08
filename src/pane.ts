@@ -86,28 +86,20 @@ export class Pane {
    *  flag the tripwire would fire on every tab switch with > HIDDEN_SCROLLBACK
    *  lines of buffer, drowning future regressions in noise. (#419 Fix 5) */
   private trimmedDuringHide = false;
-  /** RAF-based write batching — queues PTY data and flushes once per frame to
-   *  prevent terminal.write() from racing with fitAddon.fit() mid-reflow.
-   *
-   *  Uses a head-pointer queue: push() always appends, overflow eviction
-   *  advances pendingHead instead of calling Array.shift() (which is O(n)
-   *  on the live entries). The dead prefix is compacted in bulk when it
-   *  grows past a threshold, so a long-hidden agent stream can't leak
-   *  memory through accumulating undefined slots. (#468) */
+  /** RAF-based write batching — queues PTY data and flushes once per frame
+   *  to prevent terminal.write() from racing with fitAddon.fit() mid-reflow.
+   *  Append-only with a head pointer; eviction nulls slots and advances
+   *  head, then the dead prefix is splice-compacted past a threshold. (#468) */
   private pendingWriteData: (Uint8Array | undefined)[] = [];
   private pendingHead = 0;
-  /** Running total of live bytes in pendingWriteData — avoids O(n) iteration for cap checks */
   private pendingBytes = 0;
-  /** When the dead prefix grows past this, compact in one splice. */
   private static readonly PENDING_COMPACT_THRESHOLD = 256;
-  /** Max bytes to write to xterm.js per animation frame.  Caps the parse-pass
-   *  spike when a hidden tab with a large accumulated backlog becomes visible
-   *  — without this, the entire 128KB hits xterm.js in one synchronous
-   *  terminal.write() and drops a frame at the moment of tab focus. (#467) */
+  /** Cap each visible-flush rAF at this much data so a hidden-tab backlog
+   *  doesn't drop a frame on tab focus. (#467) */
   private static readonly FLUSH_CHUNK_BYTES = 32 * 1024;
-  /** Snapshot of distance-from-bottom taken at the start of a (possibly
-   *  multi-frame) flush sequence.  Held across chunks so every chunk's
-   *  scroll-restore returns the user to their pre-flush position. (#467) */
+  /** Pre-flush distance-from-bottom held across chunks of a multi-frame
+   *  flush so every chunk restores the same scroll position. null when
+   *  no flush sequence is active. (#467) */
   private flushSavedDistance: number | null = null;
   /** Reusable merge buffer for flushWrites() — grows as needed, never shrinks.
    *  Avoids allocating a new Uint8Array on every animation frame. */
@@ -884,8 +876,7 @@ export class Pane {
       data = new Uint8Array(this.mergeBuffer.buffer, 0, bytesThisFrame);
     }
 
-    // Advance head, null out consumed slots so the chunks can be GC'd, and
-    // decrement byte accounting.
+    // Null consumed slots so chunk byte buffers can be GC'd before compaction.
     for (let i = this.pendingHead; i < this.pendingHead + consumeCount; i++) {
       this.pendingWriteData[i] = undefined;
     }
@@ -893,12 +884,15 @@ export class Pane {
     this.pendingBytes -= bytesThisFrame;
     const moreRemaining = this.pendingWriteData.length - this.pendingHead > 0;
 
-    // Compact when the queue is fully drained — keeps the array bounded
-    // without doing splice work on every flush.
     if (!moreRemaining) {
       this.pendingWriteData.length = 0;
       this.pendingHead = 0;
       this.pendingBytes = 0;
+    } else if (this.pendingHead > Pane.PENDING_COMPACT_THRESHOLD) {
+      // Steady visible output flushes one chunk per frame while pty.onData
+      // keeps appending — the array would grow forever without this splice.
+      this.pendingWriteData.splice(0, this.pendingHead);
+      this.pendingHead = 0;
     }
 
     // Write with callback — restores scroll position AFTER xterm.js finishes

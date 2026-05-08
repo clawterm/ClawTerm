@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { logger } from "./logger";
 
 /**
  * Invoke a Tauri command with a timeout. Rejects if the command
@@ -11,6 +12,17 @@ export function invokeWithTimeout<T>(cmd: string, args?: Record<string, unknown>
       setTimeout(() => reject(new Error(`IPC timeout: ${cmd} exceeded ${ms}ms`)), ms),
     ),
   ]);
+}
+
+/** Query a shell PID's live CWD via the Rust backend.  Returns null on
+ *  any failure so callers can fall back to their cached value. (#462) */
+export async function getLiveCwd(shellPid: number, timeoutMs: number): Promise<string | null> {
+  try {
+    return await invokeWithTimeout<string>("get_process_cwd_full", { pid: shellPid }, timeoutMs);
+  } catch (e) {
+    logger.debug("getLiveCwd failed:", e);
+    return null;
+  }
 }
 
 /** Whether the current platform is macOS */

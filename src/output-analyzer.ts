@@ -5,27 +5,31 @@ import { type OutputEvent, type OutputMatcher, DEFAULT_MATCHERS } from "./matche
 class RingBuffer<T> implements Iterable<T> {
   private readonly slots: (T | undefined)[];
   private writeIdx = 0;
-  length = 0;
+  private _length = 0;
 
   constructor(private readonly capacity: number) {
     this.slots = new Array(capacity);
   }
 
+  get length(): number {
+    return this._length;
+  }
+
   push(item: T): void {
     this.slots[this.writeIdx] = item;
     this.writeIdx = (this.writeIdx + 1) % this.capacity;
-    if (this.length < this.capacity) this.length++;
+    if (this._length < this.capacity) this._length++;
   }
 
   clear(): void {
     this.slots.fill(undefined);
     this.writeIdx = 0;
-    this.length = 0;
+    this._length = 0;
   }
 
   *[Symbol.iterator](): IterableIterator<T> {
-    const start = this.length < this.capacity ? 0 : this.writeIdx;
-    for (let i = 0; i < this.length; i++) {
+    const start = this._length < this.capacity ? 0 : this.writeIdx;
+    for (let i = 0; i < this._length; i++) {
       yield this.slots[(start + i) % this.capacity] as T;
     }
   }
@@ -85,17 +89,21 @@ export class OutputAnalyzer {
   feed(data: Uint8Array) {
     const text = decoder.decode(data, { stream: true });
     this.pendingText += text;
+    // Bound peak resident pendingText: hidden-pane debounce is 1s, so a
+    // streaming agent can pile MB of text before runMatchers slices to 8KB.
+    // Trim eagerly when we cross 2× the cap; runMatchers will only ever
+    // look at the last ANSI_INPUT_CAP bytes anyway.
+    if (this.pendingText.length > ANSI_INPUT_CAP * 2) {
+      this.pendingText = this.pendingText.slice(-ANSI_INPUT_CAP);
+    }
     if (!this.matchTimer) {
       this.matchTimer = setTimeout(() => this.runMatchers(), this.debounceMs);
     }
   }
 
-  /** Tell the analyzer whether its owning pane is visible. Hidden panes use
-   *  a longer debounce so background agents don't fire matchers 10×/sec
-   *  apiece. On visible→hidden, an in-flight short timer is left to drain
-   *  (its work is already cheap with #466's input cap). On hidden→visible,
-   *  any pending text is flushed immediately so the user sees the latest
-   *  state on tab focus. (#469) */
+  /** Switch to a longer debounce when hidden so parked agents don't fire
+   *  matchers 10×/sec apiece. Hidden→visible flushes pending matches now
+   *  so the user sees the latest state on tab focus. (#469) */
   setVisibility(visible: boolean): void {
     const next = visible ? MATCH_DEBOUNCE_VISIBLE_MS : MATCH_DEBOUNCE_HIDDEN_MS;
     if (next === this.debounceMs) return;

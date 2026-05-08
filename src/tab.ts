@@ -1,7 +1,7 @@
 import type { Config } from "./config";
 import { invoke } from "@tauri-apps/api/core";
-import { invokeWithTimeout } from "./utils";
-import { pollSemaphore } from "./poll-throttle";
+import { invokeWithTimeout, getLiveCwd } from "./utils";
+import { pollSemaphore, type PollPriority } from "./poll-throttle";
 import {
   type TabState,
   type PaneState,
@@ -153,10 +153,8 @@ export class Tab {
     };
 
     pane.onTerminalTitle = () => {
-      // Title change = activity. Resume full polling — the next central tick
-      // (≤ pollIntervalMs away) will pick up the new CWD/git state. Spawning
-      // an extra debounced poll here added a per-prompt-redraw IPC for shells
-      // with dynamic prompt themes (oh-my-zsh, starship). (#461)
+      // Title change is activity — let the next central poll pick it up
+      // rather than dispatching a per-prompt-redraw IPC. (#461)
       pane.idleConsecutive = 0;
     };
 
@@ -229,24 +227,10 @@ export class Tab {
   async split(direction: SplitDirection) {
     const paneToSplit = this.focusedPane;
 
-    // Query the shell's live CWD in a single IPC. The previous code dispatched
-    // get_foreground_process + get_process_cwd_full sequentially — but
-    // get_foreground_process was never registered, so every call fell through
-    // to the catch and lastFullCwd was used regardless. Use the shell's PID
-    // directly: poll_pane_info already uses proc_cwd(shellPid) every cycle to
-    // populate lastFullCwd, so this returns the same value but live. (#462)
     let cwd: string | undefined = paneToSplit.lastFullCwd ?? this.initialCwd;
     if (paneToSplit.ptyPid) {
-      try {
-        const liveCwd = await invokeWithTimeout<string>(
-          "get_process_cwd_full",
-          { pid: paneToSplit.ptyPid },
-          this.config.advanced.ipcTimeoutMs,
-        );
-        if (liveCwd) cwd = liveCwd;
-      } catch (e) {
-        logger.debug("Failed to get CWD for split:", e);
-      }
+      const live = await getLiveCwd(paneToSplit.ptyPid, this.config.advanced.ipcTimeoutMs);
+      if (live) cwd = live;
     }
 
     await this.splitInternal(direction, cwd);
@@ -727,7 +711,7 @@ export class Tab {
   /** Poll process info for ALL panes. Called by TerminalManager.
    *  Active-tab callers pass priority="high" so their IPC slots jump
    *  ahead of any background-slice work. (#459) */
-  async pollProcessInfo(priority: "high" | "low" = "low") {
+  async pollProcessInfo(priority: PollPriority = "low") {
     if (this.pollStopped) {
       // Resume polling if: (a) any pane produced output since we stopped, OR
       // (b) enough time has passed (30s) to retry in case the process is idle

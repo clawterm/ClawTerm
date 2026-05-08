@@ -2,7 +2,7 @@ import { Tab } from "./tab";
 import { loadConfig, applyConfigToCSS, type Config } from "./config";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
-import { invokeWithTimeout, trapFocus, isMac } from "./utils";
+import { invokeWithTimeout, trapFocus, isMac, getLiveCwd } from "./utils";
 import { WorkspacePanel } from "./workspace-panel";
 import {
   openWorktreeDialog as worktreeOpenDialog,
@@ -690,24 +690,12 @@ export class TerminalManager {
     const id = `tab-${this.tabCounter}`;
     const title = computeFolderTitle(createDefaultTabState());
 
-    // Use restored CWD, or inherit from active tab. The shell's CWD is
-    // queried via a single get_process_cwd_full IPC. The previous code
-    // dispatched get_foreground_process + get_process_cwd_full
-    // sequentially, but get_foreground_process was never registered as a
-    // Rust command, so the inheritance path always fell through. (#462)
     let cwd: string | undefined = restoreCwd;
     if (!cwd && this.activeTabId) {
       const activeTab = this.tabs.get(this.activeTabId);
       if (activeTab?.ptyPid) {
-        try {
-          cwd = await invokeWithTimeout<string>(
-            "get_process_cwd_full",
-            { pid: activeTab.ptyPid },
-            this.config.advanced.ipcTimeoutMs,
-          );
-        } catch (e) {
-          logger.debug("Failed to inherit CWD from active tab:", e);
-        }
+        const live = await getLiveCwd(activeTab.ptyPid, this.config.advanced.ipcTimeoutMs);
+        if (live) cwd = live;
       }
     }
 
@@ -2130,9 +2118,7 @@ export class TerminalManager {
         `active=${activeId} idleStreak=${this.idleStreak}`,
     );
 
-    // Poll tabs concurrently so one stuck IPC call can't block everything.
-    // Active-tab pollProcessInfo runs with high priority so its IPC slots
-    // jump ahead of bg-slice work in the pollSemaphore queue. (#459)
+    // Poll tabs concurrently so one stuck IPC can't block the rest.
     const polls: Promise<void>[] = [];
     if (activeId) {
       const activeTab = this.tabs.get(activeId);
@@ -2155,9 +2141,9 @@ export class TerminalManager {
     }
     this.updateStatusBar();
 
-    // After polls, decide whether the app is "all idle" — every pane in
-    // every tab has its foreground process group equal to the shell PID.
-    // pollPane sets pane.state.isIdle on each cycle.
+    // Decide whether to drop into idle mode. anyActive here covers the
+    // "fg process running but silent" case; PTY-data and user-input wake()
+    // handles the active-streaming case independently.
     let anyActive = false;
     for (const tab of this.tabs.values()) {
       for (const pane of tab.getPanes()) {

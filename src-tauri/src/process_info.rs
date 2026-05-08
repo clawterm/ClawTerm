@@ -52,9 +52,8 @@ pub async fn poll_pane_info(
         }
     };
 
-    // 2. Git status (uses the 3s TTL cache from git_info; subprocess work
-    // runs on the blocking pool so this await doesn't tie up the command
-    // worker — see git_info::get_git_status. (#457))
+    // 2. Git status — async so the subprocess work (on cache miss) doesn't
+    // hold the Tauri command worker. (#457)
     let git = if !cwd_full.is_empty() && !skip_expensive {
         git_info::get_git_status(cwd_full.clone()).await.ok()
     } else {
