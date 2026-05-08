@@ -1087,9 +1087,60 @@ export class TerminalManager {
       case "about":
         showToast(`Clawterm v${__APP_VERSION__}`, "info");
         return;
+      case "editCopy":
+      case "editCut":
+      case "editPaste":
+      case "editSelectAll":
+        this.dispatchEditAction(id);
+        return;
       default:
         logger.debug("Unhandled menu-action:", id);
     }
+  }
+
+  /** Edit menu (#497). When a text input has focus (settings, search bar,
+   *  command palette), use the browser's native edit semantics. Otherwise
+   *  route to the focused pane's xterm. */
+  private dispatchEditAction(id: string): void {
+    const el = document.activeElement as HTMLElement | null;
+    const inText = !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
+    if (inText) {
+      if (id === "editSelectAll" && (el as HTMLInputElement).select) {
+        (el as HTMLInputElement).select();
+      } else if (id === "editPaste") {
+        navigator.clipboard.readText().then(
+          (text) => document.execCommand("insertText", false, text),
+          (e) => logger.debug("Clipboard read failed:", e),
+        );
+      } else if (id === "editCopy" || id === "editCut") {
+        document.execCommand(id === "editCut" ? "cut" : "copy");
+      }
+      return;
+    }
+    const tab = this.activeTabId ? this.tabs.get(this.activeTabId) : null;
+    const pane = tab?.getFocusedPane();
+    if (!pane) return;
+    if (id === "editSelectAll") {
+      pane.terminal.selectAll();
+      return;
+    }
+    if (id === "editPaste") {
+      navigator.clipboard.readText().then(
+        (text) => pane.requestPaste(text),
+        (e) => {
+          logger.debug("Clipboard read failed:", e);
+          showToast("Failed to read clipboard", "error");
+        },
+      );
+      return;
+    }
+    // editCopy / editCut — terminal has no cut concept; both copy the selection.
+    const sel = pane.terminal.getSelection();
+    if (!sel) return;
+    navigator.clipboard.writeText(sel).catch((e) => {
+      logger.debug("Clipboard write failed:", e);
+      showToast("Failed to copy to clipboard", "error");
+    });
   }
 
   private toggleSettingsPanel() {

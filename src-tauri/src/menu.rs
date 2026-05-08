@@ -17,10 +17,9 @@
 //!   PredefinedMenuItem for free localization + role behavior
 //! - macOS only — gated by cfg in main.rs
 //!
-//! Edit menu cut/copy/paste use predefined items, which route through
-//! the macOS responder chain. xterm-specific forwarding (so they hit
-//! the focused pane's terminal rather than the WebView focus) is the
-//! follow-up that the issue calls out.
+//! Edit menu cut/copy/paste/selectAll dispatch through custom IDs so
+//! they reach the focused pane's xterm (or text input) rather than
+//! relying on the macOS responder chain (#497).
 
 use tauri::{
     menu::{Menu, MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder},
@@ -64,10 +63,10 @@ fn build_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
         .build()?;
 
     let edit_submenu = SubmenuBuilder::new(app, "Edit")
-        .item(&PredefinedMenuItem::cut(app, None)?)
-        .item(&PredefinedMenuItem::copy(app, None)?)
-        .item(&PredefinedMenuItem::paste(app, None)?)
-        .item(&PredefinedMenuItem::select_all(app, None)?)
+        .item(&MenuItemBuilder::with_id("editCut", "Cut").accelerator("CmdOrCtrl+X").build(app)?)
+        .item(&MenuItemBuilder::with_id("editCopy", "Copy").accelerator("CmdOrCtrl+C").build(app)?)
+        .item(&MenuItemBuilder::with_id("editPaste", "Paste").accelerator("CmdOrCtrl+V").build(app)?)
+        .item(&MenuItemBuilder::with_id("editSelectAll", "Select All").accelerator("CmdOrCtrl+A").build(app)?)
         .separator()
         .item(&MenuItemBuilder::with_id("toggleSearch", "Find…").build(app)?)
         .build()?;

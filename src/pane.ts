@@ -361,14 +361,7 @@ export class Pane {
             action: () => {
               navigator.clipboard
                 .readText()
-                .then((text) => {
-                  if (!text || this.disposed) return;
-                  if (text.includes("\n") && !this.terminal.modes.bracketedPasteMode) {
-                    this.showPasteConfirm(text);
-                  } else {
-                    this.terminal.paste(text);
-                  }
-                })
+                .then((text) => this.requestPaste(text))
                 .catch((e) => {
                   logger.debug("Clipboard read failed:", e);
                   showToast("Failed to read clipboard", "error");
@@ -972,6 +965,18 @@ export class Pane {
     this.pasteOverlay = showPasteDialog(text, this.terminal, this.ac.signal, () => {
       this.pasteOverlay = null;
     });
+  }
+
+  /** Public paste entrypoint used by the macOS Edit > Paste menu (#497) and
+   *  the right-click context menu — same multi-line gating as the keyboard
+   *  paste handler at line 392. */
+  requestPaste(text: string): void {
+    if (!text || this.disposed) return;
+    if (text.includes("\n") && !this.terminal.modes.bracketedPasteMode) {
+      this.showPasteConfirm(text);
+    } else {
+      this.terminal.paste(text);
+    }
   }
 
   /** Shared scroll state update — called from both terminal.onScroll (buffer
