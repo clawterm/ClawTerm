@@ -37,8 +37,12 @@ const ANSI_RE = /\x1b\[[0-9;]*[a-zA-Z]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b[()
 /** Reuse a single TextDecoder to avoid per-chunk allocation */
 const decoder = new TextDecoder();
 
-/** Debounce interval for regex matching (ms) */
-const MATCH_DEBOUNCE_MS = 100;
+/** Debounce interval for regex matching when the pane is visible (ms) */
+const MATCH_DEBOUNCE_VISIBLE_MS = 100;
+/** Debounce interval for regex matching when the pane is hidden (ms).
+ *  Tab/sidebar indicators driven by matchers still fire — just at 1Hz
+ *  instead of 10Hz, which matters when many parked agents stream output. (#469) */
+const MATCH_DEBOUNCE_HIDDEN_MS = 1000;
 
 /** Max number of events to retain in history */
 const MAX_EVENT_HISTORY = 200;
@@ -59,6 +63,8 @@ export class OutputAnalyzer {
   /** Pending text accumulated between debounced match runs */
   private pendingText = "";
   private matchTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Current debounce interval — adjusted by setVisibility() (#469) */
+  private debounceMs: number = MATCH_DEBOUNCE_VISIBLE_MS;
 
   /** Stored event history with positions for timeline rendering */
   readonly eventHistory = new RingBuffer<OutputEvent>(MAX_EVENT_HISTORY);
@@ -80,7 +86,24 @@ export class OutputAnalyzer {
     const text = decoder.decode(data, { stream: true });
     this.pendingText += text;
     if (!this.matchTimer) {
-      this.matchTimer = setTimeout(() => this.runMatchers(), MATCH_DEBOUNCE_MS);
+      this.matchTimer = setTimeout(() => this.runMatchers(), this.debounceMs);
+    }
+  }
+
+  /** Tell the analyzer whether its owning pane is visible. Hidden panes use
+   *  a longer debounce so background agents don't fire matchers 10×/sec
+   *  apiece. On visible→hidden, an in-flight short timer is left to drain
+   *  (its work is already cheap with #466's input cap). On hidden→visible,
+   *  any pending text is flushed immediately so the user sees the latest
+   *  state on tab focus. (#469) */
+  setVisibility(visible: boolean): void {
+    const next = visible ? MATCH_DEBOUNCE_VISIBLE_MS : MATCH_DEBOUNCE_HIDDEN_MS;
+    if (next === this.debounceMs) return;
+    this.debounceMs = next;
+    if (visible && this.matchTimer && this.pendingText) {
+      clearTimeout(this.matchTimer);
+      this.matchTimer = null;
+      this.runMatchers();
     }
   }
 

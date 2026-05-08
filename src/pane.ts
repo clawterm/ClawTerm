@@ -639,6 +639,7 @@ export class Pane {
    */
   setVisible(visible: boolean) {
     this.tabVisible = visible;
+    this.analyzer.setVisibility(visible);
     if (visible) {
       // Restore original scrollback from before hiding (#305)
       if (this.savedScrollback !== null) {
