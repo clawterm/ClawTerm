@@ -20,7 +20,7 @@ pub struct PanePollResult {
 /// Batched pane poll — performs CWD, git, and project introspection in a
 /// single IPC call.
 #[tauri::command]
-pub fn poll_pane_info(
+pub async fn poll_pane_info(
     shell_pid: u32,
     last_cwd: Option<String>,
     skip_expensive: bool,
@@ -52,9 +52,11 @@ pub fn poll_pane_info(
         }
     };
 
-    // 2. Git status (uses the 3s TTL cache from git_info)
+    // 2. Git status (uses the 3s TTL cache from git_info; subprocess work
+    // runs on the blocking pool so this await doesn't tie up the command
+    // worker — see git_info::get_git_status. (#457))
     let git = if !cwd_full.is_empty() && !skip_expensive {
-        git_info::get_git_status(cwd_full.clone()).ok()
+        git_info::get_git_status(cwd_full.clone()).await.ok()
     } else {
         None
     };
@@ -253,11 +255,11 @@ mod tests {
 
     #[test]
     fn test_poll_pane_info_skip_expensive() {
-        let result = poll_pane_info(
+        let result = tauri::async_runtime::block_on(poll_pane_info(
             99999,
             Some("/tmp".to_string()),
             true,
-        );
+        ));
         let r = result.unwrap();
         assert_eq!(r.cwd_full, "/tmp");
         assert_eq!(r.cwd_folder, "tmp");
@@ -267,11 +269,7 @@ mod tests {
 
     #[test]
     fn test_poll_pane_info_no_last_cwd() {
-        let result = poll_pane_info(
-            99999,
-            None,
-            false,
-        );
+        let result = tauri::async_runtime::block_on(poll_pane_info(99999, None, false));
         let r = result.unwrap();
         // proc_cwd for non-existent PID fails — falls back to empty prev_cwd
         assert!(r.cwd_full.is_empty() || !r.cwd_full.is_empty()); // doesn't crash

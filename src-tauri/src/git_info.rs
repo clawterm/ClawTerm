@@ -90,8 +90,21 @@ pub struct GitStatus {
 /// Get structured git status using `git status --porcelain=v2 --branch`.
 /// Results are cached per-directory: successes with a 3s TTL, errors with
 /// a 10s TTL (prevents repeated subprocess spawns for broken directories).
+///
+/// Async Tauri command — the entire body (canonicalize, cache lookup,
+/// subprocess on miss, cache insert) runs on the blocking thread pool so
+/// the Tauri command worker is free to service other IPC while a slow
+/// `git status` (NFS, large index) is in flight. (#457)
 #[tauri::command]
-pub fn get_git_status(dir: String) -> Result<GitStatus, String> {
+pub async fn get_git_status(dir: String) -> Result<GitStatus, String> {
+    tauri::async_runtime::spawn_blocking(move || get_git_status_sync(dir))
+        .await
+        .map_err(|e| format!("git task join error: {}", e))?
+}
+
+/// Sync core of get_git_status — used directly by tests and by the
+/// blocking-pool task spawned from the async Tauri command.
+pub fn get_git_status_sync(dir: String) -> Result<GitStatus, String> {
     let path = match std::fs::canonicalize(&dir) {
         Ok(p) => p,
         Err(e) => return Err(format!("invalid dir: {}", e)),
@@ -278,7 +291,7 @@ mod tests {
         fs::write(dir.join("README.md"), "test").unwrap();
         let _ = std::process::Command::new("git").args(["add", "README.md"]).current_dir(&dir).output();
         let _ = std::process::Command::new("git").args(["commit", "-m", "init"]).current_dir(&dir).output();
-        let result = get_git_status(dir.to_string_lossy().to_string());
+        let result = get_git_status_sync(dir.to_string_lossy().to_string());
         assert!(result.is_ok());
         let status = result.unwrap();
         assert_eq!(status.branch, "main");
@@ -305,7 +318,7 @@ mod tests {
         fs::write(dir.join("file2.txt"), "new staged").unwrap();
         let _ = std::process::Command::new("git").args(["add", "file2.txt"]).current_dir(&dir).output();
         fs::write(dir.join("file3.txt"), "untracked").unwrap();
-        let result = get_git_status(dir.to_string_lossy().to_string());
+        let result = get_git_status_sync(dir.to_string_lossy().to_string());
         assert!(result.is_ok());
         let status = result.unwrap();
         assert_eq!(status.branch, "develop");
@@ -320,7 +333,7 @@ mod tests {
         let dir = std::env::temp_dir().join("clawterm_test_git_status_nongit");
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
-        let result = get_git_status(dir.to_string_lossy().to_string());
+        let result = get_git_status_sync(dir.to_string_lossy().to_string());
         assert!(result.is_err());
         let _ = fs::remove_dir_all(&dir);
     }
@@ -334,11 +347,11 @@ mod tests {
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
 
-        let r1 = get_git_status(dir.to_string_lossy().to_string());
+        let r1 = get_git_status_sync(dir.to_string_lossy().to_string());
         assert!(r1.is_err());
 
         // Second call — should hit the error cache (10s TTL)
-        let r2 = get_git_status(dir.to_string_lossy().to_string());
+        let r2 = get_git_status_sync(dir.to_string_lossy().to_string());
         assert!(r2.is_err());
         assert_eq!(r1.unwrap_err(), r2.unwrap_err());
 
@@ -364,12 +377,12 @@ mod tests {
         let _ = std::process::Command::new("git").args(["add", "."]).current_dir(&dir).output();
         let _ = std::process::Command::new("git").args(["commit", "-m", "i"]).current_dir(&dir).output();
 
-        let r1 = get_git_status(dir.to_string_lossy().to_string());
+        let r1 = get_git_status_sync(dir.to_string_lossy().to_string());
         assert!(r1.is_ok());
 
         // Mutate the working tree — cached result should still return clean
         fs::write(dir.join("f.txt"), "changed").unwrap();
-        let r2 = get_git_status(dir.to_string_lossy().to_string());
+        let r2 = get_git_status_sync(dir.to_string_lossy().to_string());
         assert!(r2.is_ok());
         // Within 3s TTL — should return cached (0 modified)
         assert_eq!(r2.unwrap().modified, 0);
