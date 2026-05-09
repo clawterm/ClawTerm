@@ -1,7 +1,7 @@
 {
   "name": "clawterm",
   "private": true,
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "A terminal for running many AI agents at once and keeping track of them.",
   "homepage": "https://clawterm.github.io/clawterm",
   "repository": {

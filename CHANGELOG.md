@@ -6,6 +6,41 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-05-09
+
+### Added
+- **macOS native menu bar** — Clawterm now has a real menu bar in the right of the apple logo, with File / Edit / View / Tab / Pane / Project / Window / Help submenus reaching every action that's also bound to a keybinding or in the command palette. Accelerators mirror `config.keybindings` and rebuild on config reload, so the menu always shows your current shortcut next to each item. Items dim contextually (Close Pane is greyed when only one pane is open, Jump to Branch is greyed outside a git repo, etc.) and the Edit menu's Cut/Copy/Paste/Select All route to the focused xterm or text input rather than just the WebView focus (#487, #495, #496, #497)
+- **Settings → About surface** — the settings panel now shows the tagline, repo link, and license alongside the version number, so the panel reads as a real "about" home rather than a forms surface (#494)
+- **Brand book** — `docs/brand.md` documents Clawterm's position, voice, color tokens, type scale, naming, and screenshot guidelines as the source of truth for any future visual change (#494)
+- **Empty / error state surfaces** — shared `.empty-state` class for list empty surfaces (workspace panel, worktree dialog) and a real `.pane-error` overlay shown when a PTY can't spawn, replacing the inline red ANSI text that was previously written into a half-initialized terminal (#500)
+- **CI lint guards** — `scripts/lint-tokens.sh` fails the build on hardcoded hex colors, numeric font-sizes, or numeric font-weights anywhere outside `:root` in `style.css`. `scripts/lint-name.sh` fails on `ClawTerm` mixed-case anywhere outside the brand book itself, pinning **Clawterm** as the canonical capitalization (#493, #494)
+
+### Changed
+- **Strict 4pt grid spacing scale** — dropped the off-grid `--space-3: 6px` and `--space-5: 10px`, renumbered the scale to `4 / 8 / 12 / 16 / 20 / 24 / 32`. Every callsite migrated, off-grid values rounded UP so the worst case is 2px more breathing room. Documented in `docs/brand.md` (#493)
+- **Pane footer rebuild** — single row, transparent background, no top border, model + effort badge + context-bar+% on the left and branch + elapsed pinned to the right via a flex spacer. Long branch names ellipsis under pressure while the `↑N` ahead-counter stays pinned. The footer is now exactly the height of one line of text. Cost ($) and the thinking-enabled dot were dropped — the footer is a glanceable status line, not a billing surface (#493, #503)
+- **`.btn` base + modifier system** — introduced `.btn` plus `.btn--primary`, `.btn--secondary`, `.btn--destructive`, `.btn--ghost`, `.btn--icon`. Migrated dialog buttons (paste-confirm, close-confirm, update-dialog, worktree-dialog), the update notice action, settings panel buttons, and four icon buttons (tab-close, project-tab-close, search-btn, toast-dismiss). Net ~190 lines of duplicated CSS removed (#499)
+- **Workspace active-row convention unified** — `.workspace-entry.active` dropped its left-only 2px accent border in favor of the same `bg-active` tint the rest of the app uses for selected list items (#498)
+- **Sidebar / terminal-area gap centered** — removed the redundant outer `padding-right` on `#sidebar`; the inner `tab-list` and `sidebar-footer` already own their own padding. Fixes a 16px-vs-8px asymmetry that pushed the drag divider off-center (no issue, footer review)
+- **Elapsed counter caps past 24h** — `formatElapsed` switches to `Nd Hh` form once the session crosses a day, capping the string at 5–6 characters so a multi-day pane doesn't push the truncatable footer items into ellipsis just because nobody closed the tab (#506)
+
+### Fixed
+- **Context % was never showing** — `parseStatusLine` was reading `ctx.input_tokens` / `ctx.output_tokens` but Claude Code emits `total_input_tokens` / `total_output_tokens`. The field guard always failed, so `out.contextWindow` never populated and the renderer skipped the bar entirely. Reading the right field names plus coercing a null `used_percentage` to 0 now shows the bar at 0% on a fresh session and tracks correctly thereafter (no issue, footer review)
+- **Footer leftover-pixel "highlight bar"** — xterm renders cells with `#131316` (`--bg-surface`) but the focused pane background is `#1a1a1e` (`--bg-elevated`). xterm fits to whole rows and rounds down, so 0–17px of leftover pixels between the last terminal row and the bottom of `.pane-terminal` painted as the lighter focused-pane background, looking like a "highlight bar" right above the footer. After a tab switch the fitAddon often landed on a different rounding and the gap doubled the apparent footer height. `.pane-terminal` is now pinned to `--bg-surface` so those leftover pixels match the cell color regardless of focus (no issue, footer review)
+- **Footer elapsed counter froze at first poll** — the cache key didn't include the elapsed string, so once the first poll painted `0:01`, every subsequent poll's cache key matched and the counter never advanced. The cache is now split into a structural key (everything except elapsed) and a fast path that just rewrites the elapsed span when nothing structural changed — counter ticks every second without rebuilding the row (no issue, footer review)
+- **Search bar overflowed deeply-split panes** — `.search-bar` had `width: 200px` with no upper bound, so on a 4-way-split pane (~250px wide) the bar extended past the left edge. Capped to `calc(100% - var(--space-7))` (no issue, edge-case audit)
+- **Toast grew unbounded on long error messages** — `.toast` had `max-width: 400px` but no `max-height` and no word-break, so a long error or stack trace grew the toast vertically past the viewport. Added `max-height: 50vh; overflow-y: auto; overflow-wrap: anywhere` (no issue, edge-case audit)
+- **Modal sizing on narrow windows** — `.palette-modal`, `.close-confirm-dialog`, and `.split-choice-dialog` now respect `max-width: 90vw` so a 360px-wide window doesn't reveal a 440px modal extending past its edges. The close-confirm body also caps at `max-height: 80vh` with internal scroll, so a long list of changed files can't push the action row out of the viewport (no issue, edge-case audit)
+- **Long project / branch / model names** truncate with ellipsis: `.project-tab` caps at 200px, `.workspace-entry-name` and `.palette-label` shrink with `min-width: 0` and ellipsis, `.tab-switcher-item-branch` caps at 50% of the row instead of stealing all the space from titles (no issue, edge-case audit)
+- **Update notice fits compact sidebar widths** — `.update-notice` was overflowing the sidebar at narrow widths because the verbose version label (`0.99.0-beta.10+gitsha`) plus the Update button couldn't both fit. Added `min-width: 0` and hide the version line in compact mode; the Update button is now reachable down to the 100px sidebar resize minimum (#504)
+- **Quick-command rows balloon to multi-line** — long bound shell commands used to render as the full multi-line label on the shortcuts row, growing it vertically. Cap to 60 chars with the full text in a tooltip; tighten `.shortcuts-label` so any overlong label ellipsisis instead of wrapping (#505)
+- **Split-pane layout off by 2px** — `tab.ts` had `dividerPx = 6` from before the 4pt-grid migration, but the actual `--split-divider-width` is now `var(--space-3) = 8px`, so split-pane geometry was off by 2px per split. Constant updated and tied back to the token via comment (no issue, design-system audit)
+- **Drag divider off-center** — see above; sidebar padding asymmetry made the gap 16px on one side and 8px on the other, with the drag handle floating in the middle (no issue, sidebar centering)
+
+### Removed
+- **Dead `:root` tokens** — `--text-disabled`, `--pane-unfocused-opacity` (orphaned in 2c0fad5 when focus dimming was removed), and `--icon-md` had zero callsites and were dropped (no issue, design-system audit)
+- **Cost ($) display and thinking-enabled dot** in the pane footer — replaced by the cleaner single-line model + effort + context% layout (#493)
+
+
 ## [1.2.0] - 2026-04-14
 
 ### Removed
@@ -1123,7 +1158,8 @@ This release establishes Clawterm's visual identity, transforming the app from a
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/clawterm/clawterm/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/clawterm/clawterm/compare/v1.1.2...v1.2.0
 [1.1.2]: https://github.com/clawterm/clawterm/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/clawterm/clawterm/compare/v1.1.0...v1.1.1
