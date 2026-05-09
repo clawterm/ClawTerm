@@ -338,7 +338,11 @@ body {
   font: inherit;
   font-size: var(--font-base);
   padding: var(--space-1) var(--space-2);
-  width: 80px;
+  /* Was a fixed 80px which couldn't display typical project names while
+     editing; cap range so short names stay tight and long names get
+     room without breaking the project bar layout. */
+  min-width: 80px;
+  max-width: 200px;
   outline: none;
 }
 
@@ -394,6 +398,9 @@ body {
 }
 
 .win-ctrl {
+  /* Off-grid 46px is the canonical Windows window-control button width
+     (Microsoft's caption-button spec); kept inline so a future widescale
+     "make everything 4-grid" sweep doesn't break native-feeling chrome. */
   width: 46px;
   height: 100%;
   border: none;
@@ -837,7 +844,7 @@ body {
   position: absolute;
   inset: var(--space-3);
   overflow-y: auto;
-  padding: 40px 48px;
+  padding: var(--space-8);
   background: var(--bg-modal);
   color: var(--text-primary);
   border: var(--border-width) solid var(--border-subtle);
@@ -1016,8 +1023,8 @@ body {
   font-size: var(--font-md);
   line-height: 1;
   padding: 0 var(--space-2);
-  height: 22px;
-  min-width: 22px;
+  height: var(--space-7);
+  min-width: var(--space-7);
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition:
@@ -1093,8 +1100,9 @@ body {
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 12px;
-  left: -6px;
+  /* 12px hit area centered on the 0-width divider boundary. */
+  width: var(--space-4);
+  left: calc(var(--space-4) / -2);
   cursor: col-resize;
 }
 
@@ -1628,7 +1636,9 @@ body {
 /* Tab switcher — uses .palette-* base classes with overrides */
 .tab-switcher-overlay {
   z-index: var(--z-modal);
-  padding-top: 80px;
+  /* 64px ≈ space-8 × 2; sits a bit lower than the palette so when both
+     are visible they don't stack at the same vertical anchor. */
+  padding-top: calc(var(--space-8) * 2);
 }
 
 .tab-switcher-item-title {
@@ -1849,7 +1859,9 @@ body {
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding-top: 60px;
+  /* 64px ≈ space-8 × 2 — palette sits high so it doesn't fight chrome
+     for vertical attention. */
+  padding-top: calc(var(--space-8) * 2);
   background: var(--overlay-backdrop);
 }
 
