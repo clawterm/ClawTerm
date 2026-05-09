@@ -27,12 +27,16 @@ export interface StatusLineData {
     totalLinesRemoved: number;
   };
   contextWindow?: {
+    /** Lifetime totals across the session — Claude Code names these
+     *  `total_input_tokens` / `total_output_tokens` in the payload. */
     inputTokens: number;
     outputTokens: number;
     contextWindowSize: number;
-    /** null before first API call */
-    usedPercentage: number | null;
-    remainingPercentage: number | null;
+    /** Claude Code emits this as nullable while the session is between
+     *  turns; we coerce null → 0 in parse so callers can render the bar
+     *  immediately instead of waiting for the first API response. */
+    usedPercentage: number;
+    remainingPercentage: number;
   };
   exceeds200kTokens?: boolean;
   effort?: { level: "low" | "medium" | "high" | "xhigh" | "max" };
@@ -111,16 +115,17 @@ export function parseStatusLine(json: string): StatusLineData | null {
 
   const ctx = obj(r, "context_window");
   if (ctx) {
-    const inputTokens = num(ctx.input_tokens);
-    const outputTokens = num(ctx.output_tokens);
+    const inputTokens = num(ctx.total_input_tokens);
+    const outputTokens = num(ctx.total_output_tokens);
     const contextWindowSize = num(ctx.context_window_size);
     if (inputTokens !== undefined && outputTokens !== undefined && contextWindowSize !== undefined) {
+      const usedPercentage = num(ctx.used_percentage) ?? 0;
       out.contextWindow = {
         inputTokens,
         outputTokens,
         contextWindowSize,
-        usedPercentage: num(ctx.used_percentage) ?? null,
-        remainingPercentage: num(ctx.remaining_percentage) ?? null,
+        usedPercentage,
+        remainingPercentage: num(ctx.remaining_percentage) ?? 100 - usedPercentage,
       };
     }
   }

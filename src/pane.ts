@@ -30,9 +30,6 @@ interface IPtyWithInit extends IPty {
 
 let paneCounter = 0;
 
-/** Cost threshold below which we hide the cost label so empty sessions stay clean. */
-const COST_DISPLAY_MIN_USD = 0.1;
-
 function pushSpan(parent: HTMLElement, cls: string, text: string, title?: string): HTMLSpanElement {
   const el = document.createElement("span");
   el.className = cls;
@@ -43,14 +40,21 @@ function pushSpan(parent: HTMLElement, cls: string, text: string, title?: string
 }
 
 /**
- * Build the Claude statusLine row in the pane footer. Shows context bar,
- * model, effort badge, thinking dot, cost, and vim mode when relevant.
- * Mutates `row` in place.
+ * Build the Claude statusLine portion of the footer: model name, effort
+ * badge, context %, and vim mode when relevant. Mutates `row` in place.
+ * Cost and thinking-enabled dot are intentionally omitted — the footer
+ * is a glanceable status line, not a billing surface.
  */
-function renderClaudeRow(row: HTMLElement, sl: StatusLineData): void {
-  const used = sl.contextWindow?.usedPercentage ?? null;
+function renderClaudeMetrics(row: HTMLElement, sl: StatusLineData): void {
+  pushSpan(row, "footer-claude-model", sl.model.displayName);
 
-  if (used !== null) {
+  const effort = sl.effort?.level;
+  if (effort && effort !== "low" && effort !== "medium") {
+    pushSpan(row, `footer-claude-effort footer-claude-effort-${effort}`, effort, `Effort: ${effort}`);
+  }
+
+  if (sl.contextWindow) {
+    const used = sl.contextWindow.usedPercentage;
     const wrap = pushSpan(row, "footer-claude-context", "");
     const level = used >= 85 ? "crit" : used >= 60 ? "warn" : "ok";
     const bar = pushSpan(wrap, `footer-claude-context-bar footer-claude-context-bar-${level}`, "");
@@ -62,29 +66,10 @@ function renderClaudeRow(row: HTMLElement, sl: StatusLineData): void {
     }
   }
 
-  pushSpan(row, "footer-claude-model", sl.model.displayName);
-
-  const effort = sl.effort?.level;
-  if (effort && effort !== "low" && effort !== "medium") {
-    pushSpan(row, `footer-claude-effort footer-claude-effort-${effort}`, effort, `Effort: ${effort}`);
-  }
-
-  if (sl.thinking?.enabled) {
-    const dot = pushSpan(row, "footer-claude-thinking", "•", "Thinking enabled");
-    dot.setAttribute("aria-label", "Thinking enabled");
-  }
-
-  if (sl.cost && sl.cost.totalCostUsd >= COST_DISPLAY_MIN_USD) {
-    const tooltip = `Cost: $${sl.cost.totalCostUsd.toFixed(4)} · ${sl.cost.totalLinesAdded}+ / ${sl.cost.totalLinesRemoved}-`;
-    pushSpan(row, "footer-claude-cost", `$${sl.cost.totalCostUsd.toFixed(2)}`, tooltip);
-  }
-
   if (sl.vim && sl.vim.mode !== "NORMAL") {
     const cls = `footer-claude-vim footer-claude-vim-${sl.vim.mode.toLowerCase().replace(" ", "-")}`;
     pushSpan(row, cls, sl.vim.mode);
   }
-
-  row.style.display = "";
 }
 
 /**
@@ -736,11 +721,15 @@ export class Pane {
     const gs = s.gitStatus;
     const sl = s.statusLine;
     const ctx = sl?.contextWindow;
-    const cost = sl?.cost;
     const slKey = sl
-      ? `${sl.model.displayName}|${ctx?.usedPercentage ?? ""}|${sl.exceeds200kTokens ?? ""}|${sl.effort?.level ?? ""}|${sl.thinking?.enabled ?? ""}|${cost?.totalCostUsd ?? ""}|${cost?.totalLinesAdded ?? ""}|${cost?.totalLinesRemoved ?? ""}|${sl.vim?.mode ?? ""}`
+      ? `${sl.model.displayName}|${ctx?.usedPercentage ?? ""}|${sl.exceeds200kTokens ?? ""}|${sl.effort?.level ?? ""}|${sl.vim?.mode ?? ""}`
       : "no-sl";
-    const key = `${s.folderName}|${s.gitBranch}|${gs?.modified ?? ""}|${gs?.staged ?? ""}|${gs?.untracked ?? ""}|${gs?.ahead ?? ""}|${gs?.behind ?? ""}|${slKey}`;
+    // Include the elapsed string in the cache key \u2014 otherwise the footer
+    // is rebuilt only when something else changes, so the elapsed counter
+    // appears to freeze (looking like the stats "disappeared" by going
+    // stale).
+    const elapsed = formatElapsed(this.createdAt);
+    const key = `${s.folderName}|${s.gitBranch}|${gs?.modified ?? ""}|${gs?.staged ?? ""}|${gs?.untracked ?? ""}|${gs?.ahead ?? ""}|${gs?.behind ?? ""}|${slKey}|${elapsed}`;
     if (key === this.footerCacheKey) return;
     this.footerCacheKey = key;
 
@@ -749,14 +738,18 @@ export class Pane {
     this.footerRow2.style.display = "none";
     this.footer.className = "pane-footer";
 
+    // Single row: Claude metrics on the left, branch + elapsed pushed
+    // to the right by the flex spacer. Row 2 is unused \u2014 kept around
+    // because removing the field would churn the start() / dispose
+    // paths for no real benefit.
+    if (sl) renderClaudeMetrics(this.footerRow1, sl);
+
     pushSpan(this.footerRow1, "footer-spacer", "");
     if (s.gitBranch) {
       const branchText = gs && gs.ahead > 0 ? `${s.gitBranch} \u2191${gs.ahead}` : s.gitBranch;
       pushSpan(this.footerRow1, "footer-branch", branchText);
     }
-    pushSpan(this.footerRow1, "footer-elapsed", formatElapsed(this.createdAt));
-
-    if (sl) renderClaudeRow(this.footerRow2, sl);
+    pushSpan(this.footerRow1, "footer-elapsed", elapsed);
   }
 
   private deferredFitTimer: ReturnType<typeof setTimeout> | null = null;

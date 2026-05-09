@@ -154,8 +154,8 @@ describe("parseStatusLine", () => {
         total_lines_removed: 5,
       },
       context_window: {
-        input_tokens: 100,
-        output_tokens: 50,
+        total_input_tokens: 100,
+        total_output_tokens: 50,
         context_window_size: 200000,
         used_percentage: 42.5,
         remaining_percentage: 57.5,
@@ -192,8 +192,8 @@ describe("parseStatusLine", () => {
       session_id: "s3",
       model: { id: "x", display_name: "X" },
       context_window: {
-        input_tokens: 0,
-        output_tokens: 0,
+        total_input_tokens: 0,
+        total_output_tokens: 0,
         context_window_size: 200000,
         used_percentage: null,
         remaining_percentage: null,
@@ -201,7 +201,10 @@ describe("parseStatusLine", () => {
     });
     const parsed = parseStatusLine(json);
     expect(parsed).not.toBeNull();
-    expect(parsed!.contextWindow?.usedPercentage).toBeNull();
+    // null used_percentage coerces to 0 so a fresh session renders the bar
+    // empty instead of skipping it entirely.
+    expect(parsed!.contextWindow?.usedPercentage).toBe(0);
+    expect(parsed!.contextWindow?.remainingPercentage).toBe(100);
     expect(parsed!.rateLimits).toBeUndefined();
     expect(parsed!.effort).toBeUndefined();
     expect(parsed!.vim).toBeUndefined();

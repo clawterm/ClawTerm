@@ -237,6 +237,11 @@ body {
   border-radius: var(--radius-md);
   cursor: pointer;
   white-space: nowrap;
+  /* Cap long project names so they don't push the title bar to scroll
+     to the right and hide the active project; ellipsis past the cap. */
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   transition:
     background var(--transition-speed),
     color var(--transition-speed),
@@ -436,7 +441,10 @@ body {
   min-height: 0;
   background: var(--bg-base);
   border-right: none;
-  padding-right: var(--space-3);
+  /* No outer padding — #tab-list and #sidebar-footer own their own
+     internal padding. Doubling it here just made the gap between sidebar
+     and terminal-area asymmetric (16px on the sidebar side vs 8px on the
+     terminal side) and pushed the drag divider off-center. */
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1220,14 +1228,21 @@ body {
   cursor: row-resize;
 }
 
-/* Per-pane status footer — replaces global #status-bar (#348) */
+/* Per-pane status footer — replaces global #status-bar (#348). Background
+   is transparent so the footer reads as part of the pane it sits on; if
+   we paint --bg-surface here the focused pane (--bg-elevated) ends up
+   visibly lighter than the footer below it. No top border either —
+   the smaller --text-tertiary typography already separates it from the
+   terminal content above without needing a hairline. */
 .pane-footer {
   font-family: var(--font-mono);
   font-size: var(--font-xs);
   color: var(--text-tertiary);
-  padding: var(--space-1) var(--space-3);
-  background: var(--bg-surface);
-  border-top: var(--border-width) solid var(--border-subtle);
+  /* No vertical padding — the row's line-height already gives the text
+     enough room above and below; adding padding made the footer twice
+     as tall as the text it contains. */
+  padding: 0 var(--space-3);
+  background: transparent;
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -1239,8 +1254,15 @@ body {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  height: 18px;
-  line-height: 18px;
+  /* line-height drives the row height directly: font-xs (10) × 1.6 = 16px.
+     Tight against the text without crowding badges that paint a background
+     to the full line height. */
+  line-height: 1.6;
+  /* Allow flex children to shrink below their min-content size, and clip
+     anything that still overflows so a four-way split with long branch
+     names can't push the elapsed counter off-screen. */
+  min-width: 0;
+  overflow: hidden;
 }
 
 .pane-footer-row:empty {
@@ -1249,14 +1271,34 @@ body {
 
 .footer-spacer {
   flex: 1;
+  min-width: 0;
+}
+
+/* Truncatable text — shrink first, ellipsis when content doesn't fit. */
+.footer-branch,
+.footer-claude-model {
+  color: var(--text-tertiary);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.footer-claude-model {
+  color: var(--text-secondary);
+}
+
+/* Fixed-size signal elements — never shrink so the bar stays readable
+   and the elapsed counter / badges stay visible even on narrow panes. */
+.footer-elapsed,
+.footer-claude-context,
+.footer-claude-effort,
+.footer-claude-tag,
+.footer-claude-vim {
+  flex-shrink: 0;
 }
 
 .footer-elapsed {
   font-variant-numeric: tabular-nums;
-  color: var(--text-tertiary);
-}
-
-.footer-branch {
   color: var(--text-tertiary);
 }
 
@@ -1308,10 +1350,6 @@ body {
   color: var(--text-secondary);
 }
 
-.footer-claude-model {
-  color: var(--text-secondary);
-}
-
 .footer-claude-effort {
   text-transform: uppercase;
   font-size: var(--font-xs);
@@ -1328,17 +1366,6 @@ body {
 .footer-claude-effort-max {
   background: var(--badge-warn-bg);
   color: var(--badge-warn-text);
-}
-
-.footer-claude-thinking {
-  color: var(--color-purple-signal);
-  font-size: var(--font-lg);
-  line-height: 1;
-}
-
-.footer-claude-cost {
-  font-variant-numeric: tabular-nums;
-  color: var(--text-tertiary);
 }
 
 .footer-claude-vim {
@@ -1481,6 +1508,9 @@ body {
   border: var(--border-width) solid var(--border-default);
   border-radius: var(--radius-md);
   padding: var(--space-2) var(--space-3);
+  /* Cap to the pane width so the search bar can't extend past the left
+     edge on a deeply-split pane (~250px wide). */
+  max-width: calc(100% - var(--space-7));
 }
 
 .search-input {
@@ -1490,6 +1520,7 @@ body {
   font-size: var(--font-md);
   outline: none;
   width: 200px;
+  min-width: 0;
 }
 
 .search-input:focus-visible {
@@ -1603,7 +1634,12 @@ body {
   font-size: var(--font-xs);
   color: var(--accent);
   opacity: var(--opacity-soft);
-  flex-shrink: 0;
+  /* Long branch names truncate rather than steal space from the title;
+     a hard cap keeps the title side at least readable on narrow modals. */
+  max-width: 50%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   margin-left: auto;
   padding-left: var(--space-3);
 }
@@ -1723,9 +1759,15 @@ body {
 .toast {
   pointer-events: auto;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-3);
   max-width: 400px;
+  /* Cap tall toasts (long error messages, stack traces) and break very
+     long unbreakable strings (paths, URLs) so the toast stays inside its
+     400px envelope instead of growing past the viewport. */
+  max-height: 50vh;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
   font-size: var(--font-base);
@@ -1786,6 +1828,7 @@ body {
 
 .palette-modal {
   width: 440px;
+  max-width: 90vw;
   max-height: 380px;
   background: var(--bg-modal);
   border: var(--border-width) solid var(--border-subtle);
@@ -1827,6 +1870,10 @@ body {
   display: flex;
   align-items: center;
   gap: var(--space-3);
+  /* Long command labels and remote branch names ellipsis instead of
+     wrapping to a second line that breaks row height. */
+  min-width: 0;
+  overflow: hidden;
   transition: background var(--transition-speed);
 }
 
@@ -1850,6 +1897,10 @@ body {
   color: var(--text-primary);
   font-size: var(--font-md);
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .palette-item.selected .palette-label {
@@ -1926,6 +1977,13 @@ body {
   font-size: var(--font-base);
   color: var(--text-primary);
   font-weight: var(--font-weight-medium);
+  min-width: 0;
+}
+.workspace-entry-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .workspace-dot {
   width: var(--icon-dot);
@@ -2092,6 +2150,10 @@ body {
   border-radius: var(--radius-lg);
   padding: var(--space-6) var(--space-7);
   min-width: 300px;
+  max-width: 90vw;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
   box-shadow: var(--shadow-lg);
 }
 
@@ -2106,6 +2168,10 @@ body {
   font-size: var(--font-md);
   color: var(--text-secondary);
   margin-bottom: var(--space-5);
+  /* Long messages (e.g. a list of changed files in a confirm-close) scroll
+     instead of pushing the actions row off-screen. */
+  overflow-y: auto;
+  overflow-wrap: anywhere;
 }
 
 /* Update dialog — dedicated overlay + dialog for the updater (decoupled from close-confirm) */
