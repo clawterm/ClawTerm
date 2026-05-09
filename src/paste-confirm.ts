@@ -45,15 +45,15 @@ export function showPasteConfirm(
   actionsEl.className = "close-confirm-actions";
 
   const cancelBtn = document.createElement("button");
-  cancelBtn.className = "btn btn--secondary close-confirm-btn cancel";
+  cancelBtn.className = "btn btn--secondary close-confirm-btn";
   cancelBtn.textContent = "Cancel";
 
   const singleLineBtn = document.createElement("button");
-  singleLineBtn.className = "btn btn--secondary close-confirm-btn cancel";
+  singleLineBtn.className = "btn btn--secondary close-confirm-btn";
   singleLineBtn.textContent = "Paste as Single Line";
 
   const pasteBtn = document.createElement("button");
-  pasteBtn.className = "btn btn--primary close-confirm-btn primary";
+  pasteBtn.className = "btn btn--primary close-confirm-btn";
   pasteBtn.textContent = "Paste";
 
   actionsEl.appendChild(cancelBtn);

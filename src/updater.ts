@@ -253,11 +253,11 @@ function showUpdateConfirm(version: string, releaseNotes: string, onConfirm: () 
   actionsEl.className = "update-dialog-actions";
 
   const cancelBtn = document.createElement("button");
-  cancelBtn.className = "btn btn--secondary update-dialog-btn cancel";
+  cancelBtn.className = "btn btn--secondary update-dialog-btn";
   cancelBtn.textContent = "Cancel";
 
   const confirmBtn = document.createElement("button");
-  confirmBtn.className = "btn btn--primary update-dialog-btn confirm";
+  confirmBtn.className = "btn btn--primary update-dialog-btn";
   confirmBtn.textContent = "Update & Restart";
 
   actionsEl.appendChild(cancelBtn);

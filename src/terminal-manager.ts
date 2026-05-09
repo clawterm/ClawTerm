@@ -1924,11 +1924,11 @@ export class TerminalManager {
     actionsEl.className = "close-confirm-actions";
 
     const cancelBtn = document.createElement("button");
-    cancelBtn.className = "btn btn--secondary close-confirm-btn cancel";
+    cancelBtn.className = "btn btn--secondary close-confirm-btn";
     cancelBtn.textContent = "Cancel";
 
     const confirmBtn = document.createElement("button");
-    confirmBtn.className = "btn btn--destructive close-confirm-btn confirm";
+    confirmBtn.className = "btn btn--destructive close-confirm-btn";
     confirmBtn.textContent = "Close";
 
     actionsEl.appendChild(cancelBtn);

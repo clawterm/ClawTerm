@@ -101,10 +101,10 @@ export function showWorktreeDialog(
   const btnRow = document.createElement("div");
   btnRow.className = "worktree-buttons";
   const cancelBtn = document.createElement("button");
-  cancelBtn.className = "btn btn--secondary worktree-btn worktree-btn-cancel";
+  cancelBtn.className = "btn btn--secondary worktree-btn";
   cancelBtn.textContent = "Cancel";
   const createBtn = document.createElement("button");
-  createBtn.className = "btn btn--primary worktree-btn worktree-btn-create";
+  createBtn.className = "btn btn--primary worktree-btn";
   createBtn.textContent = options?.buttonLabel ?? "Create Tab";
   createBtn.disabled = true;
   btnRow.appendChild(cancelBtn);
