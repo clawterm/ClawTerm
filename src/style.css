@@ -957,6 +957,14 @@ body {
 .shortcuts-label {
   font-size: var(--font-md);
   color: var(--text-secondary);
+  /* Long labels (e.g. quick-command rows that show the full shell
+     command) ellipsis instead of wrapping to a second line. The TS
+     side stashes the full text in a `title` tooltip. */
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .shortcuts-kbd {

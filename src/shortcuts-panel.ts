@@ -293,7 +293,15 @@ export function createSettingsPanel(opts: PanelOptions): ShortcutsPanel {
 
     const label = document.createElement("span");
     label.className = "shortcuts-label";
-    label.textContent = entry.label;
+    // Cap the visible label and stash the full text in a tooltip so a
+    // long quick-command binding (the entire shell command) doesn't
+    // balloon the row to multiple lines (#505).
+    if (entry.label.length > 60) {
+      label.textContent = entry.label.slice(0, 58) + "…";
+      label.title = entry.label;
+    } else {
+      label.textContent = entry.label;
+    }
     row.appendChild(label);
 
     const right = document.createElement("span");
