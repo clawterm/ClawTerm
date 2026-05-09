@@ -583,6 +583,13 @@ body {
   padding: var(--space-2) var(--space-3);
 }
 
+/* Drop the version line at compact widths — long pre-release versions
+   like "0.99.0-beta.10+gitsha" plus the Update button can't both fit
+   in a 140px sidebar. The label ("Update available") still shows. */
+.sidebar-compact .update-notice-version {
+  display: none;
+}
+
 /* --- Sidebar slim mode (<120px) (#346) --- */
 .sidebar-slim .tab-entry {
   padding: var(--space-1) var(--space-2);
@@ -1663,6 +1670,9 @@ body {
   align-items: center;
   gap: var(--space-3);
   width: 100%;
+  /* Allow the text column to shrink below its min-content size so the
+     Update button stays inside the sidebar at narrow widths (#504). */
+  min-width: 0;
   margin-bottom: var(--space-3);
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
