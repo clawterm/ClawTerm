@@ -13,7 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Settings → About surface** — the settings panel now shows the tagline, repo link, and license alongside the version number, so the panel reads as a real "about" home rather than a forms surface (#494)
 - **Brand book** — `docs/brand.md` documents Clawterm's position, voice, color tokens, type scale, naming, and screenshot guidelines as the source of truth for any future visual change (#494)
 - **Empty / error state surfaces** — shared `.empty-state` class for list empty surfaces (workspace panel, worktree dialog) and a real `.pane-error` overlay shown when a PTY can't spawn, replacing the inline red ANSI text that was previously written into a half-initialized terminal (#500)
-- **CI lint guards** — `scripts/lint-tokens.sh` fails the build on hardcoded hex colors, numeric font-sizes, or numeric font-weights anywhere outside `:root` in `style.css`. `scripts/lint-name.sh` fails on `ClawTerm` mixed-case anywhere outside the brand book itself, pinning **Clawterm** as the canonical capitalization (#493, #494)
+- **CI lint guards** — `scripts/lint-tokens.sh` fails the build on hardcoded hex colors, numeric font-sizes, or numeric font-weights anywhere outside `:root` in `style.css`. `scripts/lint-name.sh` enforces the canonical lowercase-t spelling of **Clawterm** in every tracked file outside the brand book (#493, #494)
 
 ### Changed
 - **Strict 4pt grid spacing scale** — dropped the off-grid `--space-3: 6px` and `--space-5: 10px`, renumbered the scale to `4 / 8 / 12 / 16 / 20 / 24 / 32`. Every callsite migrated, off-grid values rounded UP so the worst case is 2px more breathing room. Documented in `docs/brand.md` (#493)
