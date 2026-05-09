@@ -1756,7 +1756,7 @@ export class TerminalManager {
       tab.appendChild(label);
 
       const closeBtn = document.createElement("button");
-      closeBtn.className = "project-tab-close";
+      closeBtn.className = "btn btn--icon project-tab-close";
       closeBtn.innerHTML = `<svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 1l6 6M7 1L1 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
       closeBtn.title = "Close project";
       closeBtn.onclick = (e) => {

@@ -295,7 +295,7 @@ export function createSettingsPanel(opts: PanelOptions): ShortcutsPanel {
     label.className = "shortcuts-label";
     // Cap the visible label and stash the full text in a tooltip so a
     // long quick-command binding (the entire shell command) doesn't
-    // balloon the row to multiple lines (#505).
+    // balloon the row to multiple lines.
     if (entry.label.length > 60) {
       label.textContent = entry.label.slice(0, 58) + "…";
       label.title = entry.label;

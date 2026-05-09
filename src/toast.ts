@@ -20,7 +20,7 @@ export function showToast(message: string, level: ToastLevel = "info", durationM
   toast.textContent = message;
 
   const dismiss = document.createElement("button");
-  dismiss.className = "toast-dismiss";
+  dismiss.className = "btn btn--icon toast-dismiss";
   dismiss.textContent = "\u00d7";
   dismiss.setAttribute("aria-label", "Dismiss notification");
   dismiss.addEventListener("click", () => remove());

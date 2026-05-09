@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
   createDefaultTabState,
   createDefaultPaneState,
@@ -292,13 +292,20 @@ describe("deriveClaudeAttention", () => {
 });
 
 describe("formatElapsed", () => {
-  const at = (offsetMs: number) => Date.now() - offsetMs;
+  // Frozen clock — Date.now() is read both inside the test and inside
+  // formatElapsed, so without freezing the test could flake on a slow
+  // CI runner if the wall clock crosses a second between the two reads.
+  const NOW = 1_700_000_000_000;
+  beforeEach(() => vi.useFakeTimers().setSystemTime(NOW));
+  afterEach(() => vi.useRealTimers());
+
+  const at = (offsetMs: number) => NOW - offsetMs;
 
   it("uses M:SS for the first hour", () => {
     expect(formatElapsed(at(0))).toBe("0:00");
     expect(formatElapsed(at(45 * 1000))).toBe("0:45");
     expect(formatElapsed(at(75 * 1000))).toBe("1:15");
-    expect(formatElapsed(at(59 * 60 * 1000))).toMatch(/^59:00$/);
+    expect(formatElapsed(at(59 * 60 * 1000))).toBe("59:00");
   });
 
   it("uses H:MM:SS between 1 hour and 24 hours", () => {
@@ -306,7 +313,7 @@ describe("formatElapsed", () => {
     expect(formatElapsed(at(23 * 60 * 60 * 1000 + 30 * 60 * 1000))).toBe("23:30:00");
   });
 
-  it("caps at Nd Hh past 24 hours so width stays bounded (#506)", () => {
+  it("caps at Nd Hh past 24 hours so width stays bounded", () => {
     expect(formatElapsed(at(24 * 60 * 60 * 1000))).toBe("1d 0h");
     expect(formatElapsed(at(7 * 24 * 60 * 60 * 1000 + 14 * 60 * 60 * 1000))).toBe("7d 14h");
   });

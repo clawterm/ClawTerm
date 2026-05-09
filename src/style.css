@@ -378,33 +378,19 @@ body {
 }
 
 /* Close button on project tabs — hidden until hover, same pattern as .tab-close */
+/* Layout-only — base look from .btn / .btn--icon. */
 .project-tab-close {
   width: var(--icon-sm);
   height: var(--icon-sm);
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-sm);
-  color: var(--text-tertiary);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   flex-shrink: 0;
   opacity: 0;
-  padding: 0;
-  transition:
-    background var(--transition-speed),
-    color var(--transition-speed),
-    opacity var(--transition-speed);
+  /* Reveal on parent hover only — keeps the close affordance from
+     adding visual noise to the always-visible project tab strip. */
+  transition: opacity var(--transition-speed);
 }
 
 .project-tab:hover .project-tab-close {
   opacity: 1;
-}
-
-.project-tab-close:hover {
-  background: var(--bg-active);
-  color: var(--text-primary);
 }
 
 /* Drag-to-reorder project tabs (#404) */
@@ -801,22 +787,12 @@ body {
   background: var(--bg-active);
 }
 
+/* Layout-only — base look from .btn / .btn--icon. */
 .tab-close {
   width: var(--icon-btn);
   height: var(--icon-btn);
-  border: none;
-  background: transparent;
-  color: var(--text-tertiary);
-  cursor: pointer;
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   opacity: 0;
-  transition:
-    background var(--transition-speed),
-    color var(--transition-speed),
-    opacity var(--transition-speed);
+  transition: opacity var(--transition-speed);
   -webkit-app-region: no-drag;
   flex-shrink: 0;
 }
@@ -825,20 +801,8 @@ body {
   opacity: 1;
 }
 
-.tab-close:hover {
-  background: var(--bg-active);
-  color: var(--text-primary);
-}
-
 .tab-close:focus-visible {
   opacity: 1;
-  outline: var(--border-width) solid var(--accent);
-  outline-offset: -1px;
-}
-
-.tab-close:hover {
-  background: var(--bg-active);
-  color: var(--text-primary);
 }
 
 /* Pinned tab — hide close button */
@@ -1653,22 +1617,10 @@ body {
   white-space: nowrap;
 }
 
+/* Layout-only — base look from .btn / .btn--icon. */
 .search-btn {
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
   font-size: var(--font-base);
   padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
-  transition:
-    background var(--transition-speed),
-    color var(--transition-speed);
-}
-
-.search-btn:hover {
-  background: var(--bg-active);
-  color: var(--text-primary);
 }
 
 .search-close {
@@ -1904,19 +1856,12 @@ body {
   border-color: var(--orange-muted);
 }
 
+/* Layout-only — base look from .btn / .btn--icon. */
 .toast-dismiss {
-  background: transparent;
-  border: none;
-  color: var(--text-tertiary);
-  cursor: pointer;
   font-size: var(--font-lg);
   padding: 0 var(--space-1);
   margin-left: auto;
   flex-shrink: 0;
-}
-
-.toast-dismiss:hover {
-  color: var(--text-secondary);
 }
 
 /* Command palette */
@@ -2074,9 +2019,8 @@ body {
   background: var(--border-subtle);
 }
 .workspace-entry.active {
-  /* Match the rest of the app's "selected list item" convention
-     (.project-tab.active, .palette-item.selected, .context-menu-item:hover):
-     bg-active tint, no left-border accent. (#498) */
+  /* Same selected-row convention as .project-tab.active /
+     .palette-item.selected / .context-menu-item:hover. */
   background: var(--bg-active);
 }
 .workspace-entry-branch {

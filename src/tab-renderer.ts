@@ -156,7 +156,7 @@ export class TabRenderer {
     hint.style.display = "none";
 
     const close = document.createElement("button");
-    close.className = "tab-close";
+    close.className = "btn btn--icon tab-close";
     close.innerHTML = `<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 2L8 8M8 2L2 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
     close.addEventListener("click", (e) => {
       e.stopPropagation();

@@ -32,19 +32,19 @@ export class SearchBar {
     const signal = this.listenerAbort.signal;
 
     const prevBtn = document.createElement("button");
-    prevBtn.className = "search-btn";
+    prevBtn.className = "btn btn--icon search-btn";
     prevBtn.textContent = "\u25B2";
     prevBtn.title = "Previous (Shift+Enter)";
     prevBtn.addEventListener("click", () => this.findPrev(), { signal });
 
     const nextBtn = document.createElement("button");
-    nextBtn.className = "search-btn";
+    nextBtn.className = "btn btn--icon search-btn";
     nextBtn.textContent = "\u25BC";
     nextBtn.title = "Next (Enter)";
     nextBtn.addEventListener("click", () => this.findNext(), { signal });
 
     const closeBtn = document.createElement("button");
-    closeBtn.className = "search-btn search-close";
+    closeBtn.className = "btn btn--icon search-btn search-close";
     closeBtn.textContent = "\u00D7";
     closeBtn.addEventListener("click", () => this.hide(), { signal });
 

@@ -135,9 +135,12 @@ export class Pane {
   private gutterTimer: ReturnType<typeof setInterval> | null = null;
   /** Per-pane status footer — replaces global status bar (#348) */
   private footer: HTMLDivElement | null = null;
-  private footerRow1: HTMLDivElement | null = null;
-  private footerRow2: HTMLDivElement | null = null;
-  private footerCacheKey = "";
+  private footerRow: HTMLDivElement | null = null;
+  /** Cache for the structural part of the footer (everything except the
+   *  elapsed counter). When unchanged, the per-second poll only rewrites
+   *  the elapsed span instead of rebuilding the whole row. */
+  private footerStructuralKey = "";
+  private footerElapsedSpan: HTMLSpanElement | null = null;
   private readonly ac = new AbortController();
   private readonly createdAt = Date.now();
   private readonly disposables: { dispose(): void }[] = [];
@@ -297,12 +300,9 @@ export class Pane {
     // after terminal.open() so the footer appears below the terminal.
     this.footer = document.createElement("div");
     this.footer.className = "pane-footer";
-    this.footerRow1 = document.createElement("div");
-    this.footerRow1.className = "pane-footer-row";
-    this.footerRow2 = document.createElement("div");
-    this.footerRow2.className = "pane-footer-row";
-    this.footer.appendChild(this.footerRow1);
-    this.footer.appendChild(this.footerRow2);
+    this.footerRow = document.createElement("div");
+    this.footerRow.className = "pane-footer-row";
+    this.footer.appendChild(this.footerRow);
 
     // Fire onFocus when this pane's element receives focus (click/tab)
     this.element.addEventListener("focusin", () => this.onFocus?.(), { signal: this.ac.signal });
@@ -712,10 +712,12 @@ export class Pane {
     }
   }
 
-  /** Update per-pane status footer with current state.
-   *  Called after each poll cycle. Uses a cache key to skip redundant DOM updates. */
+  /** Update per-pane status footer with current state. Called after each
+   *  poll cycle. Two-tier cache: when only the elapsed counter has
+   *  changed, just rewrite that one span; rebuild the whole row only
+   *  when a structural field (branch, gitStatus, statusLine) changes. */
   updateFooter() {
-    if (!this.footer || !this.footerRow1 || !this.footerRow2) return;
+    if (!this.footerRow) return;
     const s = this.state;
     const gs = s.gitStatus;
     const sl = s.statusLine;
@@ -723,37 +725,27 @@ export class Pane {
     const slKey = sl
       ? `${sl.model.displayName}|${ctx?.usedPercentage ?? ""}|${sl.exceeds200kTokens ?? ""}|${sl.effort?.level ?? ""}|${sl.vim?.mode ?? ""}`
       : "no-sl";
-    // Include the elapsed string in the cache key \u2014 otherwise the footer
-    // is rebuilt only when something else changes, so the elapsed counter
-    // appears to freeze (looking like the stats "disappeared" by going
-    // stale).
+    const structuralKey = `${s.folderName}|${s.gitBranch}|${gs?.modified ?? ""}|${gs?.staged ?? ""}|${gs?.untracked ?? ""}|${gs?.ahead ?? ""}|${gs?.behind ?? ""}|${slKey}`;
     const elapsed = formatElapsed(this.createdAt);
-    const key = `${s.folderName}|${s.gitBranch}|${gs?.modified ?? ""}|${gs?.staged ?? ""}|${gs?.untracked ?? ""}|${gs?.ahead ?? ""}|${gs?.behind ?? ""}|${slKey}|${elapsed}`;
-    if (key === this.footerCacheKey) return;
-    this.footerCacheKey = key;
 
-    this.footerRow1.textContent = "";
-    this.footerRow2.textContent = "";
-    this.footerRow2.style.display = "none";
-    this.footer.className = "pane-footer";
+    if (structuralKey === this.footerStructuralKey) {
+      if (this.footerElapsedSpan) this.footerElapsedSpan.textContent = elapsed;
+      return;
+    }
+    this.footerStructuralKey = structuralKey;
 
-    // Single row: Claude metrics on the left, branch + elapsed pushed
-    // to the right by the flex spacer. Row 2 is unused \u2014 kept around
-    // because removing the field would churn the start() / dispose
-    // paths for no real benefit.
-    if (sl) renderClaudeMetrics(this.footerRow1, sl);
-
-    pushSpan(this.footerRow1, "footer-spacer", "");
+    this.footerRow.textContent = "";
+    if (sl) renderClaudeMetrics(this.footerRow, sl);
+    pushSpan(this.footerRow, "footer-spacer", "");
     if (s.gitBranch) {
-      // Branch and ahead-counter are separate spans so the branch can
-      // ellipsis under pressure while the actionable "you have unpushed
-      // commits" indicator stays pinned next to it (#503).
-      pushSpan(this.footerRow1, "footer-branch", s.gitBranch);
+      // Two spans so the branch can ellipsis while the ahead-counter
+      // stays pinned next to it via flex-shrink:0.
+      pushSpan(this.footerRow, "footer-branch", s.gitBranch);
       if (gs && gs.ahead > 0) {
-        pushSpan(this.footerRow1, "footer-branch-ahead", `\u2191${gs.ahead}`, `${gs.ahead} ahead of remote`);
+        pushSpan(this.footerRow, "footer-branch-ahead", `\u2191${gs.ahead}`, `${gs.ahead} ahead of remote`);
       }
     }
-    pushSpan(this.footerRow1, "footer-elapsed", elapsed);
+    this.footerElapsedSpan = pushSpan(this.footerRow, "footer-elapsed", elapsed);
   }
 
   private deferredFitTimer: ReturnType<typeof setTimeout> | null = null;
@@ -977,20 +969,13 @@ export class Pane {
     this.terminal.selectAll();
   }
 
-  /** Replace the terminal viewport with a designed error overlay (#500).
-   *  Used when the PTY can't spawn — previously this was inline red
-   *  ANSI text written into a half-initialized terminal. */
+  /** Replace the terminal viewport with a designed error overlay. Used
+   *  when the PTY can't spawn. */
   private showPaneError(title: string, body: string): void {
     const overlay = document.createElement("div");
     overlay.className = "pane-error";
-    const titleEl = document.createElement("div");
-    titleEl.className = "pane-error-title";
-    titleEl.textContent = title;
-    const bodyEl = document.createElement("div");
-    bodyEl.className = "pane-error-body";
-    bodyEl.textContent = body;
-    overlay.appendChild(titleEl);
-    overlay.appendChild(bodyEl);
+    pushSpan(overlay, "pane-error-title", title);
+    pushSpan(overlay, "pane-error-body", body);
     this.element.appendChild(overlay);
   }
 
