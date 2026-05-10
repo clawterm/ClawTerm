@@ -412,9 +412,11 @@ mod tests {
 
     #[test]
     fn test_proc_name_invalid_pid_errors() {
-        // PID 0 is reserved on every supported platform — the lookup must
-        // surface an error rather than returning an empty string or panicking.
-        assert!(platform::proc_name(0).is_err());
+        // u32::MAX is far above any real PID on macOS, Linux, or Windows,
+        // so the lookup must surface an error rather than panic. (PID 0 is
+        // not a safe sentinel — it's the "System Idle Process" on Windows
+        // and resolves successfully via sysinfo.)
+        assert!(platform::proc_name(u32::MAX).is_err());
     }
 
     #[test]
