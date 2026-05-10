@@ -180,6 +180,16 @@ pub fn get_process_cwd_full(pid: u32) -> Result<String, String> {
     platform::proc_cwd(pid)
 }
 
+/// Get the executable name of a process (e.g. "claude", "zsh", "node").
+///
+/// Used by the paste-confirm gate to skip the multi-line warning dialog
+/// when the foreground process is a trusted AI agent CLI — pasting into
+/// an agent's prompt isn't the same risk as pasting into a shell.
+#[tauri::command]
+pub fn get_process_name(pid: u32) -> Result<String, String> {
+    platform::proc_name(pid)
+}
+
 // --- macOS process introspection ---
 
 #[cfg(target_os = "macos")]
@@ -237,14 +247,40 @@ mod platform {
             Ok(path)
         }
     }
+
+    pub fn proc_name(pid: u32) -> Result<String, String> {
+        let mut buf = [0u8; 256];
+        let ret = unsafe {
+            libc::proc_name(
+                pid as libc::c_int,
+                buf.as_mut_ptr() as *mut libc::c_void,
+                buf.len() as u32,
+            )
+        };
+        if ret <= 0 {
+            return Err(format!("proc_name failed for pid {}", pid));
+        }
+        // proc_name fills the buffer and may or may not include a null
+        // terminator within the returned length; read up to the first NUL
+        // byte to be safe across both conventions.
+        let len = buf.iter().position(|&b| b == 0).unwrap_or(buf.len());
+        let name = std::str::from_utf8(&buf[..len])
+            .map_err(|e| format!("proc_name utf8 error: {}", e))?
+            .to_string();
+        if name.is_empty() {
+            return Err("empty proc name".to_string());
+        }
+        Ok(name)
+    }
 }
 
 // --- Windows process introspection ---
 
 #[cfg(target_os = "windows")]
 mod platform {
+    use sysinfo::{Pid, ProcessRefreshKind, System, UpdateKind};
+
     pub fn proc_cwd(pid: u32) -> Result<String, String> {
-        use sysinfo::{Pid, System, ProcessRefreshKind, UpdateKind};
         let mut sys = System::new();
         sys.refresh_processes_specifics(
             sysinfo::ProcessesToUpdate::Some(&[Pid::from_u32(pid)]),
@@ -256,6 +292,25 @@ mod platform {
         let cwd = process.cwd()
             .ok_or_else(|| format!("cwd not available for pid {}", pid))?;
         Ok(cwd.to_string_lossy().to_string())
+    }
+
+    pub fn proc_name(pid: u32) -> Result<String, String> {
+        let mut sys = System::new();
+        sys.refresh_processes_specifics(
+            sysinfo::ProcessesToUpdate::Some(&[Pid::from_u32(pid)]),
+            true,
+            ProcessRefreshKind::nothing(),
+        );
+        let process = sys.process(Pid::from_u32(pid))
+            .ok_or_else(|| format!("process {} not found", pid))?;
+        let name = process.name().to_string_lossy().to_string();
+        // Strip a trailing ".exe" so callers can match on the same bare
+        // name they'd see on macOS / Linux.
+        let name = name.strip_suffix(".exe").unwrap_or(&name).to_string();
+        if name.is_empty() {
+            return Err(format!("empty proc name for pid {}", pid));
+        }
+        Ok(name)
     }
 }
 
@@ -269,6 +324,18 @@ mod platform {
         std::fs::read_link(&link)
             .map(|p| p.to_string_lossy().to_string())
             .map_err(|e| format!("failed to read {}: {}", link, e))
+    }
+
+    pub fn proc_name(pid: u32) -> Result<String, String> {
+        // /proc/{pid}/comm holds the command name (max 15 chars + NL on Linux)
+        let path = format!("/proc/{}/comm", pid);
+        let raw = std::fs::read_to_string(&path)
+            .map_err(|e| format!("failed to read {}: {}", path, e))?;
+        let name = raw.trim_end_matches('\n').to_string();
+        if name.is_empty() {
+            return Err(format!("empty proc name for pid {}", pid));
+        }
+        Ok(name)
     }
 }
 
@@ -326,6 +393,28 @@ mod tests {
         let r = result.unwrap();
         // proc_cwd for non-existent PID fails — falls back to empty prev_cwd
         assert!(r.cwd_full.is_empty() || !r.cwd_full.is_empty()); // doesn't crash
+    }
+
+    #[test]
+    fn test_proc_name_self_returns_non_empty() {
+        // The cargo-test harness binary should always be resolvable; we
+        // don't pin the exact name (it's something like "process_info-…")
+        // so we just assert we got a non-empty UTF-8 string back.
+        let pid = std::process::id();
+        let name = platform::proc_name(pid).expect("proc_name on self should succeed");
+        assert!(!name.is_empty(), "proc_name returned empty string");
+        assert!(
+            !name.contains('\0'),
+            "proc_name contains stray NUL byte: {:?}",
+            name
+        );
+    }
+
+    #[test]
+    fn test_proc_name_invalid_pid_errors() {
+        // PID 0 is reserved on every supported platform — the lookup must
+        // surface an error rather than returning an empty string or panicking.
+        assert!(platform::proc_name(0).is_err());
     }
 
     #[test]
