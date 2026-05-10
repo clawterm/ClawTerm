@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-05-10
+
+### Fixed
+- **Pasting multi-line text into Claude Code popped the confirm dialog every time** — the safety gate that catches a clipboard `rm -rf` at a shell prompt was firing for any multi-line paste when bracketed paste mode wasn't active, which Claude Code's prompt doesn't enable. The gate now resolves the pane's foreground process via a new `get_process_name` Tauri command and skips the dialog when the running program is a trusted AI agent CLI (currently `claude`); shells and unknown processes still get the dialog. Both Cmd+V and the Edit / right-click paste paths share the same trust check (#508)
+
+
 ## [1.3.1] - 2026-05-10
 
 ### Fixed
@@ -1164,7 +1170,8 @@ This release establishes Clawterm's visual identity, transforming the app from a
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v1.3.1...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v1.3.2...HEAD
+[1.3.2]: https://github.com/clawterm/clawterm/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/clawterm/clawterm/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/clawterm/clawterm/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/clawterm/clawterm/compare/v1.1.2...v1.2.0
