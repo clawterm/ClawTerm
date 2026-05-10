@@ -58,9 +58,16 @@ export function isPrimaryMod(e: KeyboardEvent): boolean {
 
 /** True when the document's currently focused element is a text input —
  *  used by the macOS Edit menu and global shortcuts to decide whether
- *  cut/copy/paste should target the WebView or the focused xterm. */
+ *  cut/copy/paste should target the WebView or the focused xterm. xterm
+ *  parks focus in a hidden `<textarea class="xterm-helper-textarea">` to
+ *  capture key events; that helper is not a real text-input target, so
+ *  treat it as "no input focused" and let cut/copy/paste route to the
+ *  terminal instead. */
 export function isTextInputFocused(): boolean {
   const el = document.activeElement;
+  if (el instanceof HTMLTextAreaElement && el.classList.contains("xterm-helper-textarea")) {
+    return false;
+  }
   return (
     el instanceof HTMLInputElement ||
     el instanceof HTMLTextAreaElement ||
