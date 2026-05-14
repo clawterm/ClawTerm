@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [1.4.2] - 2026-05-14
+
 ### Removed
 - **Dead-code sweep across three removal-wave leftovers** — code paths that grep+verify proved unreachable were trimmed: the entire Windows titlebar branch in `terminal-manager.ts` and its `.win-ctrl` / `.titlebar-win` / `--win-close-*` CSS (residual from the v1.4.0 platform drop — `isMac` has been a constant `true`); the empty no-op stubs `updateStatusBar()`, `setupStatusBarClicks()`, and `showPaneNumberOverlay()` along with the five call sites and stale doc-comments that kept invoking them (residual from #348 and #333 in v1.2.0); the unused `get_process_cwd` Tauri command (the frontend only calls `get_process_cwd_full`); the dead `sidebar.groupByState` and `sidebar.expandActiveTab` config knobs that the renderer ignored (signature took them with underscore prefixes), the duplicate `_tabIndex` parameter on `renderTabEntry`, and the matching docs row; the two non-divider `.split-horizontal` / `.split-vertical` CSS rules left over from before the `split-divider split-divider-${direction}` template existed. No visible change; ~140 lines net (#518)
 
@@ -1198,7 +1200,8 @@ This release establishes Clawterm's visual identity, transforming the app from a
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v1.4.1...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v1.4.2...HEAD
+[1.4.2]: https://github.com/clawterm/clawterm/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/clawterm/clawterm/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/clawterm/clawterm/compare/v1.3.2...v1.4.0
 [1.3.2]: https://github.com/clawterm/clawterm/compare/v1.3.1...v1.3.2

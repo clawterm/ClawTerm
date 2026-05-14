@@ -482,7 +482,7 @@ dependencies = [
 
 [[package]]
 name = "clawterm"
-version = "1.4.1"
+version = "1.4.2"
 dependencies = [
  "dirs",
  "libc",
