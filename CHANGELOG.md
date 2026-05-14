@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Fixed
+- **Option-composed characters didn't reach the terminal on non-US Mac keyboards** — `\`, `|`, `@`, `{`, `}`, `[`, `]` and other Option-dead-key characters were getting swallowed because xterm was initialised with `macOptionIsMeta: true`, which tells it to emit Esc-prefixed sequences for Option+key instead of letting macOS produce the composed character. Norwegian Option+Shift+7 (`\`), German Option+L (`@`), French Option+5 (`{`), etc. now insert at the cursor in shells and Claude Code. Word-motion via Option+Arrow / Option+Backspace is preserved by the existing explicit handler in `pane.ts`, so no readline shortcuts regress (#513)
+
 ### Removed
 - **Dead `processName` field and unused `computeDisplayTitle`** — leftovers from the 1.2.0 activity-detection removal. The field was declared on `PaneState` and `TabState`, copied between them on every poll, and read with `|| fallback` in `paneRowLabel` and the never-called `computeDisplayTitle` — but nothing ever wrote a non-empty value to it. Dropped the field, the no-op assignments, the dead read, and the entire `computeDisplayTitle` function plus its test block. No visible change (#516)
 

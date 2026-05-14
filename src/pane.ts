@@ -207,7 +207,12 @@ export class Pane {
       scrollback: config.scrollback,
       theme: TERMINAL_THEME,
       allowProposedApi: true,
-      macOptionIsMeta: true,
+      // macOptionIsMeta stays false so Option-composed characters reach the
+      // terminal on non-US Mac keyboards — Norwegian Option+Shift+7 → `\`,
+      // German Option+L → `@`, etc. (#513). Word-motion (Option+Arrow,
+      // Option+Backspace) is wired explicitly in the customKeyEventHandler
+      // below, so we don't depend on xterm's meta-prefix behavior.
+      macOptionIsMeta: false,
       macOptionClickForcesSelection: true,
     });
     this.scrollAnchor = new ScrollAnchor(this.terminal, this.id);
