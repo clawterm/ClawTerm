@@ -876,7 +876,6 @@ export class Tab {
   private deriveTabState() {
     const fps = this.focusedPane.state;
     this.state.folderName = fps.folderName;
-    this.state.processName = fps.processName;
     this.state.isIdle = fps.isIdle;
     this.state.serverPort = fps.serverPort;
     this.state.lastError = fps.lastError;
@@ -944,7 +943,6 @@ export class Tab {
 
     // Reset tab state
     this.state.lastError = null;
-    this.state.processName = "";
     this.state.isIdle = true;
     this.pollFailures = 0;
     this.pollStopped = false;

@@ -31,7 +31,7 @@ export interface TabRenderActions {
 
 /** Human-readable label for a single pane row in the sidebar sub-list. */
 function paneRowLabel(pane: PaneState): string {
-  return pane.gitBranch || pane.folderName || pane.processName || "terminal";
+  return pane.gitBranch || pane.folderName || "terminal";
 }
 
 /**

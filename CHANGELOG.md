@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Removed
+- **Dead `processName` field and unused `computeDisplayTitle`** — leftovers from the 1.2.0 activity-detection removal. The field was declared on `PaneState` and `TabState`, copied between them on every poll, and read with `|| fallback` in `paneRowLabel` and the never-called `computeDisplayTitle` — but nothing ever wrote a non-empty value to it. Dropped the field, the no-op assignments, the dead read, and the entire `computeDisplayTitle` function plus its test block. No visible change (#516)
+
+
 ## [1.3.2] - 2026-05-10
 
 ### Fixed

@@ -225,7 +225,6 @@ export function deriveClaudeAttention(panes: readonly StatusLineData[]): ClaudeA
 /** Per-pane state — tracks each pane independently */
 export interface PaneState {
   folderName: string;
-  processName: string;
   isIdle: boolean;
   serverPort: number | null;
   lastError: string | null;
@@ -240,7 +239,6 @@ export interface PaneState {
 export function createDefaultPaneState(): PaneState {
   return {
     folderName: "~",
-    processName: "",
     isIdle: true,
     serverPort: null,
     lastError: null,
@@ -255,7 +253,6 @@ export type NotificationType = "error" | "server-started" | "server-crashed" | n
 
 export interface TabState {
   folderName: string;
-  processName: string;
   isIdle: boolean;
   needsAttention: boolean;
   serverPort: number | null;
@@ -273,7 +270,6 @@ export interface TabState {
 export function createDefaultTabState(): TabState {
   return {
     folderName: "~",
-    processName: "",
     isIdle: true,
     needsAttention: false,
     serverPort: null,
@@ -291,13 +287,6 @@ export function computeFolderTitle(state: TabState): string {
   const folder = state.projectName || state.folderName || "~";
   if (folder === "~" || folder === "/") return folder;
   return `/${folder}`;
-}
-
-export function computeDisplayTitle(state: TabState): string {
-  const project = state.projectName || state.folderName || "~";
-  if (state.serverPort) return `${project} :${state.serverPort}`;
-  if (state.isIdle) return project;
-  return `${project} — ${state.processName}`;
 }
 
 /** Format elapsed time as compact M:SS, H:MM:SS, or Nd Hh past 24 hours
