@@ -1,6 +1,6 @@
 [package]
 name = "clawterm"
-version = "1.3.2"
+version = "1.4.0"
 description = "A terminal emulator for managing multiple AI agents"
 homepage = "https://clawterm.github.io/clawterm"
 repository = "https://github.com/clawterm/clawterm"

@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-05-14
+
 ### Added
 - **OSC 9;2 attention requests fire macOS notifications carrying the agent's message** — Claude Code (and other agents) emit OSC 9;2 with a payload describing *why* attention is needed; that payload used to be discarded and only the sidebar attention dot fired. Now the message text reaches a system notification routed through `NotificationManager`, gated by the previously dead `config.notifications.types.agentWaiting` knob. Active foreground tabs still suppress notifications (no point notifying about the tab you're already looking at); the sidebar dot continues to fire independently for background tabs (#517)
 - **Help → Show Keyboard Shortcuts opens a browseable overlay** of every binding in `config.keybindings`, grouped by Tabs / Projects / Panes / Terminal / Quick Commands, with live search. Reuses the data + formatter from the settings panel so the two surfaces never drift out of sync. Escape or click outside dismisses; selecting the menu item again toggles it closed. Distinct from the settings panel — read-only, focused on discoverability rather than editing (#514)
@@ -1182,7 +1184,8 @@ This release establishes Clawterm's visual identity, transforming the app from a
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v1.3.2...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/clawterm/clawterm/compare/v1.3.2...v1.4.0
 [1.3.2]: https://github.com/clawterm/clawterm/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/clawterm/clawterm/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/clawterm/clawterm/compare/v1.2.0...v1.3.0
