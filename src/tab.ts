@@ -425,11 +425,7 @@ export class Tab {
     this.focusedPane = pane;
     this.updateFocusedClass(pane);
     pane.focus();
-    this.showPaneNumberOverlay(pane);
   }
-
-  /** @deprecated Pane number overlay removed to reduce visual noise (#333) */
-  private showPaneNumberOverlay(_pane: Pane) {}
 
   /** Resize the focused pane in a direction by adjusting the parent split ratio */
   resizeFocusedPane(direction: "left" | "right" | "up" | "down", step = 0.05) {

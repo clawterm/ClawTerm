@@ -113,7 +113,7 @@ export class TerminalManager {
   private resizeObserver: ResizeObserver | null = null;
   private resizeRaf = 0;
   /** rAF ID for coalesced render — multiple scheduleRender() calls within
-   *  the same frame are batched into a single renderTabList() + updateStatusBar(). */
+   *  the same frame are batched into a single renderTabList(). */
   private renderRaf = 0;
   private pollTimer: ReturnType<typeof setTimeout> | null = null;
   /** Idle-mode bookkeeping for the central poll loop. Wake-up sources call
@@ -306,7 +306,6 @@ export class TerminalManager {
     updateSidebarMode(this.config.sidebar.width);
     this.setupResize();
     this.setupServerTracker();
-    this.setupStatusBarClicks();
 
     // Restore session or create a fresh tab.
     // V2 session format has projects; V1 is wrapped in a single project by loadSession.
@@ -1002,7 +1001,6 @@ export class TerminalManager {
     if (tab) tab.show();
 
     this.renderTabList();
-    this.updateStatusBar();
     this.persistSession();
     // User just switched tabs — break out of idle mode so footer / sidebar
     // for the newly active tab refresh on the next tick. (#456)
@@ -1595,7 +1593,6 @@ export class TerminalManager {
     }
 
     this.renderTabList();
-    this.updateStatusBar();
     this.persistSession();
   }
 
@@ -1645,7 +1642,6 @@ export class TerminalManager {
     }
 
     this.renderTabList();
-    this.updateStatusBar();
     this.persistSession();
   }
 
@@ -2127,13 +2123,12 @@ export class TerminalManager {
   }
 
   /** Schedule a coalesced render — multiple calls within the same frame
-   *  are batched into a single renderTabList() + updateStatusBar(). */
+   *  are batched into a single renderTabList(). */
   private scheduleRender() {
     if (this.renderRaf) return;
     this.renderRaf = requestAnimationFrame(() => {
       this.renderRaf = 0;
       this.renderTabList();
-      this.updateStatusBar();
       this.updateMenuDisabled();
     });
   }
@@ -2206,10 +2201,6 @@ export class TerminalManager {
     this.renderProjectBar();
     this.persistSession();
   }
-
-  /** Status bar removed — replaced by per-pane footers (#348). */
-  private setupStatusBarClicks() {}
-  private updateStatusBar() {}
 
   private adjustFontSize(delta: number) {
     const current = this.config.font.size;
@@ -2329,7 +2320,6 @@ export class TerminalManager {
       this.lastTabSnapshot = snapshot;
       this.renderTabList();
     }
-    this.updateStatusBar();
 
     // Decide whether to drop into idle mode. anyActive here covers the
     // "fg process running but silent" case; PTY-data and user-input wake()

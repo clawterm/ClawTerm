@@ -1,5 +1,5 @@
 import type { Tab } from "./tab";
-import type { PaneState, TabState } from "./tab-state";
+import type { PaneState } from "./tab-state";
 import { logger } from "./logger";
 
 interface ChildRefs {
@@ -353,9 +353,6 @@ export class TabRenderer {
       row.setAttribute("data-pane-index", String(i));
     }
   }
-
-  /** Status bar removed — replaced by per-pane footers (#348). */
-  updateStatusBar(_state: TabState | null) {}
 
   /** Build a snapshot string for change detection.
    *
