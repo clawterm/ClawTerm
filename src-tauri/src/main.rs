@@ -243,7 +243,6 @@ fn main() {
             read_session,
             write_session,
             clear_session,
-            process_info::get_process_cwd,
             process_info::get_process_cwd_full,
             process_info::get_process_name,
             process_info::poll_pane_info,

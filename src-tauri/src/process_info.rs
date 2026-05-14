@@ -146,34 +146,6 @@ fn cwd_to_folder(cwd: &str) -> String {
         })
 }
 
-/// Get the current working directory of a process by PID.
-/// Returns the last path component for display.
-#[tauri::command]
-pub fn get_process_cwd(pid: u32) -> Result<String, String> {
-    let cwd = platform::proc_cwd(pid)?;
-
-    // Show "~" when at the user's home directory
-    let home_var = std::env::var_os("HOME")
-        .or_else(|| std::env::var_os("USERPROFILE"));
-    if let Some(home) = home_var {
-        if cwd == home.to_string_lossy() {
-            return Ok("~".to_string());
-        }
-    }
-
-    let folder = std::path::Path::new(&cwd)
-        .file_name()
-        .map(|f| f.to_string_lossy().to_string())
-        .unwrap_or_else(|| {
-            if cwd == "/" {
-                "/".to_string()
-            } else {
-                "~".to_string()
-            }
-        });
-    Ok(folder)
-}
-
 /// Get the full current working directory path of a process.
 #[tauri::command]
 pub fn get_process_cwd_full(pid: u32) -> Result<String, String> {
