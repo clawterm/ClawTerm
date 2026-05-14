@@ -192,7 +192,6 @@ pub fn get_process_name(pid: u32) -> Result<String, String> {
 
 // --- macOS process introspection ---
 
-#[cfg(target_os = "macos")]
 mod platform {
     use std::mem;
 
@@ -269,71 +268,6 @@ mod platform {
             .to_string();
         if name.is_empty() {
             return Err("empty proc name".to_string());
-        }
-        Ok(name)
-    }
-}
-
-// --- Windows process introspection ---
-
-#[cfg(target_os = "windows")]
-mod platform {
-    use sysinfo::{Pid, ProcessRefreshKind, System, UpdateKind};
-
-    pub fn proc_cwd(pid: u32) -> Result<String, String> {
-        let mut sys = System::new();
-        sys.refresh_processes_specifics(
-            sysinfo::ProcessesToUpdate::Some(&[Pid::from_u32(pid)]),
-            true,
-            ProcessRefreshKind::nothing().with_cwd(UpdateKind::Always),
-        );
-        let process = sys.process(Pid::from_u32(pid))
-            .ok_or_else(|| format!("process {} not found", pid))?;
-        let cwd = process.cwd()
-            .ok_or_else(|| format!("cwd not available for pid {}", pid))?;
-        Ok(cwd.to_string_lossy().to_string())
-    }
-
-    pub fn proc_name(pid: u32) -> Result<String, String> {
-        let mut sys = System::new();
-        sys.refresh_processes_specifics(
-            sysinfo::ProcessesToUpdate::Some(&[Pid::from_u32(pid)]),
-            true,
-            ProcessRefreshKind::nothing(),
-        );
-        let process = sys.process(Pid::from_u32(pid))
-            .ok_or_else(|| format!("process {} not found", pid))?;
-        let name = process.name().to_string_lossy().to_string();
-        // Strip a trailing ".exe" so callers can match on the same bare
-        // name they'd see on macOS / Linux.
-        let name = name.strip_suffix(".exe").unwrap_or(&name).to_string();
-        if name.is_empty() {
-            return Err(format!("empty proc name for pid {}", pid));
-        }
-        Ok(name)
-    }
-}
-
-// --- Linux / other Unix fallback ---
-
-#[cfg(not(any(target_os = "macos", target_os = "windows")))]
-mod platform {
-    pub fn proc_cwd(pid: u32) -> Result<String, String> {
-        // On Linux, read /proc/{pid}/cwd symlink
-        let link = format!("/proc/{}/cwd", pid);
-        std::fs::read_link(&link)
-            .map(|p| p.to_string_lossy().to_string())
-            .map_err(|e| format!("failed to read {}: {}", link, e))
-    }
-
-    pub fn proc_name(pid: u32) -> Result<String, String> {
-        // /proc/{pid}/comm holds the command name (max 15 chars + NL on Linux)
-        let path = format!("/proc/{}/comm", pid);
-        let raw = std::fs::read_to_string(&path)
-            .map_err(|e| format!("failed to read {}: {}", path, e))?;
-        let name = raw.trim_end_matches('\n').to_string();
-        if name.is_empty() {
-            return Err(format!("empty proc name for pid {}", pid));
         }
         Ok(name)
     }

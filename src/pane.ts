@@ -18,7 +18,7 @@ import { logger } from "./logger";
 import { showToast } from "./toast";
 import { showContextMenu } from "./context-menu";
 import { FileLinkProvider } from "./file-link-provider";
-import { copyToClipboard, isPrimaryMod, isWindows } from "./utils";
+import { copyToClipboard, isPrimaryMod } from "./utils";
 import { showPasteConfirm as showPasteDialog } from "./paste-confirm";
 
 export type KeyHandler = (e: KeyboardEvent) => boolean;
@@ -223,22 +223,7 @@ export class Pane {
         return false;
       }
 
-      // Windows: Ctrl+C copies when text is selected, passes through as SIGINT when not.
-      // This matches Windows Terminal behavior and avoids the Ctrl+C conflict.
-      if (isWindows && e.type === "keydown" && e.ctrlKey && e.key === "c" && !e.shiftKey && !e.altKey) {
-        const selection = this.terminal.getSelection();
-        if (selection) {
-          navigator.clipboard
-            .writeText(selection)
-            .catch((e) => logger.debug("[pane] clipboard write failed:", e));
-          this.terminal.clearSelection();
-          e.preventDefault();
-          return false;
-        }
-        return true; // pass Ctrl+C through to PTY as interrupt
-      }
-
-      // Cmd/Ctrl + key → shell escape sequences
+      // Cmd + key → shell escape sequences
       const cmdKeys: Record<string, string> = { Backspace: "\x15", ArrowLeft: "\x01", ArrowRight: "\x05" };
       // Alt + key → word-level movement / deletion
       const altKeys: Record<string, string> = { ArrowLeft: "\x1bb", ArrowRight: "\x1bf", Backspace: "\x17" };

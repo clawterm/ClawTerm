@@ -1,5 +1,4 @@
 mod git_info;
-#[cfg(target_os = "macos")]
 mod menu;
 mod process_info;
 mod project_info;
@@ -27,20 +26,16 @@ fn session_path() -> PathBuf {
     clawterm_dir().join("session.json")
 }
 
-/// Write a file with restricted permissions.
-/// On Unix: mode 0o600 (owner-only read/write).
-/// On Windows: standard ACLs apply (no chmod equivalent needed).
+/// Write a file with owner-only read/write permissions (mode 0o600).
 fn write_private(path: &PathBuf, contents: &str) -> Result<(), String> {
-    let mut opts = fs::OpenOptions::new();
-    opts.write(true).create(true).truncate(true);
-
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::OpenOptionsExt;
-        opts.mode(0o600);
-    }
-
-    let mut f = opts.open(path).map_err(|e| e.to_string())?;
+    use std::os::unix::fs::OpenOptionsExt;
+    let mut f = fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .mode(0o600)
+        .open(path)
+        .map_err(|e| e.to_string())?;
     f.write_all(contents.as_bytes()).map_err(|e| e.to_string())
 }
 
@@ -111,7 +106,6 @@ fn setup_claude_statusline() -> Result<(), String> {
     write_private(&script_path, &script)?;
 
     // Make executable
-    #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
         fs::set_permissions(&script_path, fs::Permissions::from_mode(0o755))
@@ -152,13 +146,9 @@ fn setup_claude_statusline() -> Result<(), String> {
 #[tauri::command]
 fn detect_editors() -> Vec<String> {
     let candidates = [("code", "VS Code"), ("cursor", "Cursor")];
-    #[cfg(unix)]
-    let lookup = "which";
-    #[cfg(windows)]
-    let lookup = "where";
     let mut found = Vec::new();
     for (cmd, label) in candidates {
-        if let Ok(output) = std::process::Command::new(lookup).arg(cmd).output() {
+        if let Ok(output) = std::process::Command::new("which").arg(cmd).output() {
             if output.status.success() {
                 found.push(label.to_string());
             }
@@ -212,30 +202,14 @@ fn has_legacy_in_repo_worktrees(repo_root: String) -> bool {
 
 #[tauri::command]
 fn validate_shell(path: String) -> Result<bool, String> {
+    use std::os::unix::fs::PermissionsExt;
     // Canonicalize to resolve symlinks and validate the real target
     let real = match fs::canonicalize(&path) {
         Ok(p) => p,
         Err(_) => return Ok(false),
     };
     let meta = fs::metadata(&real).map_err(|e| e.to_string())?;
-
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        // Check it's a regular file and executable (any execute bit set)
-        Ok(meta.is_file() && (meta.permissions().mode() & 0o111 != 0))
-    }
-
-    #[cfg(windows)]
-    {
-        // On Windows, executables are identified by extension, not permission bits
-        let is_executable = real
-            .extension()
-            .and_then(|ext| ext.to_str())
-            .map(|ext| matches!(ext.to_lowercase().as_str(), "exe" | "cmd" | "bat" | "com"))
-            .unwrap_or(false);
-        Ok(meta.is_file() && is_executable)
-    }
+    Ok(meta.is_file() && (meta.permissions().mode() & 0o111 != 0))
 }
 
 fn main() {
@@ -243,24 +217,9 @@ fn main() {
     std::env::remove_var("CLAUDECODE");
 
     // Set terminal env vars so child PTYs inherit them.
-    // TERM is only meaningful on Unix (ConPTY handles VT translation on Windows).
-    #[cfg(unix)]
-    {
-        std::env::set_var("TERM", "xterm-256color");
-        std::env::set_var("COLORTERM", "truecolor");
-    }
+    std::env::set_var("TERM", "xterm-256color");
+    std::env::set_var("COLORTERM", "truecolor");
     std::env::set_var("TERM_PROGRAM", "clawterm");
-
-    // On Windows, ensure HOME is set from USERPROFILE if not already present.
-    // Many Unix-origin tools (git, npm, cargo) expect HOME even on Windows.
-    #[cfg(windows)]
-    {
-        if std::env::var_os("HOME").is_none() {
-            if let Some(profile) = std::env::var_os("USERPROFILE") {
-                std::env::set_var("HOME", profile);
-            }
-        }
-    }
 
     tauri::Builder::default()
         .plugin(tauri_plugin_pty::init())
@@ -268,19 +227,15 @@ fn main() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())
-        .setup(|_app| {
-            #[cfg(target_os = "macos")]
-            {
-                use tauri::Manager;
-                _app.manage(menu::MenuState::default());
-                let handle = _app.handle().clone();
-                menu::build_and_set(&handle)?;
-            }
+        .setup(|app| {
+            use tauri::Manager;
+            app.manage(menu::MenuState::default());
+            let handle = app.handle().clone();
+            menu::build_and_set(&handle)?;
             Ok(())
         })
-        .on_menu_event(|_app, _event| {
-            #[cfg(target_os = "macos")]
-            menu::on_menu_event(_app, _event.id().as_ref());
+        .on_menu_event(|app, event| {
+            menu::on_menu_event(app, event.id().as_ref());
         })
         .invoke_handler(tauri::generate_handler![
             read_config,
@@ -307,9 +262,7 @@ fn main() {
             has_legacy_in_repo_worktrees,
             validate_shell,
             setup_claude_statusline,
-            #[cfg(target_os = "macos")]
             menu::apply_menu_accelerators,
-            #[cfg(target_os = "macos")]
             menu::apply_menu_disabled,
         ])
         .build(tauri::generate_context!())

@@ -50,27 +50,10 @@ jobs:
 
   build:
     needs: check
-    strategy:
-      fail-fast: true
-      matrix:
-        include:
-          - target: universal-apple-darwin
-            runner: macos-latest
-          - target: x86_64-pc-windows-msvc
-            runner: windows-latest
-          - target: x86_64-unknown-linux-gnu
-            runner: ubuntu-22.04
-
-    runs-on: ${{ matrix.runner }}
+    runs-on: macos-latest
 
     steps:
       - uses: actions/checkout@v6
-
-      - name: Install Linux dependencies
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
       - uses: actions/setup-node@v6
         with:
@@ -79,7 +62,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.target == 'universal-apple-darwin' && 'aarch64-apple-darwin,x86_64-apple-darwin' || matrix.target }}
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
 
       - name: Install sccache
         uses: mozilla-actions/sccache-action@v0.0.10
@@ -87,7 +70,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
-          key: ${{ matrix.target }}
+          key: universal-apple-darwin
 
       - run: npm ci
 
@@ -128,41 +111,30 @@ jobs:
           # APPLE_ID: ${{ secrets.APPLE_ID }}
           # APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           # APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          # Windows Authenticode signing — uncomment when secrets are configured:
-          # WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
-          # WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "Clawterm ${{ github.ref_name }}"
           releaseBody: ${{ steps.notes.outputs.body }}
           releaseDraft: true
           prerelease: false
-          args: "--target ${{ matrix.target }}"
+          args: "--target universal-apple-darwin"
 
       - name: Generate and upload SHA256 checksums
-        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           ARTIFACTS='${{ steps.tauri.outputs.artifactPaths }}'
-          CHECKSUM_FILE="checksums-${{ matrix.target }}.txt"
-          hash_cmd() {
-            if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1"
-            else shasum -a 256 "$1"
-            fi
-          }
+          CHECKSUM_FILE="checksums-universal-apple-darwin.txt"
           : > "$CHECKSUM_FILE"
           # Process substitution keeps the loop in the parent shell so `set -e`
           # surfaces failures instead of silently exiting a subshell.
           while IFS= read -r file; do
-            # Convert Windows backslash paths to forward slashes for Git Bash.
-            file="${file//\\//}"
             if [ ! -f "$file" ]; then
               echo "::warning::Artifact not found, skipping: $file"
               continue
             fi
             name=$(basename "$file")
-            hash=$(hash_cmd "$file" | awk '{print $1}')
+            hash=$(shasum -a 256 "$file" | awk '{print $1}')
             printf '%s  %s\n' "$hash" "$name" >> "$CHECKSUM_FILE"
           done < <(echo "$ARTIFACTS" | jq -r '.[]')
           if [ -s "$CHECKSUM_FILE" ]; then
@@ -173,11 +145,10 @@ jobs:
             echo "::warning::No artifacts hashed — $CHECKSUM_FILE is empty, not uploading"
           fi
 
-  # Publish the draft release only after ALL platform builds succeed.
-  # This prevents users from seeing a partial release with missing platforms.
+  # Publish the draft release after the macOS build completes.
   publish:
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - name: Publish draft release
         env:

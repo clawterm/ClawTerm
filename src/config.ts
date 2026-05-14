@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { logger } from "./logger";
-import { modKey, isWindows } from "./utils";
+import { modKey } from "./utils";
 import { showToast } from "./toast";
 
 // Re-export types so existing `import type { Config } from "./config"` still works
@@ -10,24 +10,15 @@ import type { Config } from "./config-types";
 /** Current config schema version. Bump when adding/changing config fields. */
 const CONFIG_VERSION = 2;
 
-/** Return the default shell for the current platform. */
+/** Return the default shell. */
 function defaultShell(): string {
-  if (isWindows) {
-    // Prefer PowerShell 7 (pwsh) if available, else Windows PowerShell
-    return "powershell.exe";
-  }
   return "/bin/zsh";
 }
 
 /** Return appropriate default shell args based on shell name. */
 function defaultShellArgs(shell: string): string[] {
-  const basename = shell.split(/[/\\]/).pop()?.toLowerCase() ?? "";
-  // PowerShell: suppress startup banner
-  if (basename === "pwsh.exe" || basename === "powershell.exe" || basename === "pwsh") return ["-NoLogo"];
-  // cmd.exe: no args needed
-  if (basename === "cmd.exe") return [];
-  // Most POSIX shells support --login for sourcing profile files.
-  // Nushell uses -l, fish supports --login.
+  const basename = shell.split("/").pop()?.toLowerCase() ?? "";
+  // Nushell uses -l, most POSIX shells support --login for sourcing profile files
   if (basename === "nu" || basename === "nushell") return ["-l"];
   return ["--login"];
 }

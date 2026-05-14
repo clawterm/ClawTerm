@@ -37,23 +37,20 @@ export async function getLiveCwd(shellPid: number, timeoutMs: number): Promise<s
   }
 }
 
-/** Whether the current platform is macOS */
-export const isMac =
-  typeof navigator !== "undefined" ? (navigator.platform?.startsWith("Mac") ?? false) : false;
+/** Whether the current platform is macOS. Clawterm is macOS-only; kept as a
+ *  constant so legacy callers don't have to be rewritten, but it's always
+ *  true in shipped builds (#515). */
+export const isMac = true;
 
-/** Whether the current platform is Windows */
-export const isWindows =
-  typeof navigator !== "undefined" ? (navigator.platform?.startsWith("Win") ?? false) : false;
-
-/** The primary modifier key label for display (⌘ on macOS, Ctrl on Windows/Linux) */
-export const modLabel = isMac ? "\u2318" : "Ctrl";
+/** The primary modifier key label for display (⌘ on macOS) */
+export const modLabel = "\u2318";
 
 /** The primary modifier key name for keybinding strings */
-export const modKey = isMac ? "cmd" : "ctrl";
+export const modKey = "cmd";
 
-/** Check the platform-appropriate primary modifier on a keyboard event */
+/** Check the macOS primary modifier (Cmd) on a keyboard event. */
 export function isPrimaryMod(e: KeyboardEvent): boolean {
-  return isMac ? e.metaKey : e.ctrlKey;
+  return e.metaKey;
 }
 
 /** True when the document's currently focused element is a text input —

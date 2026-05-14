@@ -15,7 +15,7 @@ Pick the section that matches what you're doing:
 ### Getting started
 Start here if you've never run Clawterm before, or you need to update or reinstall.
 
-- **[Installation and updates](./getting-started/installation.md)** — install on macOS / Windows, build from source on Linux, verify checksums, control auto-updates, uninstall cleanly
+- **[Installation and updates](./getting-started/installation.md)** — install on macOS, verify checksums, control auto-updates, uninstall cleanly
 
 ### Reference
 Exhaustive lookup tables. Read top-to-bottom once, then skim as needed.
@@ -39,9 +39,9 @@ More feature pages tracked in [#408](https://github.com/clawterm/clawterm/issues
 
 | Thing | Answer | Source |
 | --- | --- | --- |
-| Config file | `~/.config/clawterm/config.json` (macOS/Linux), `%APPDATA%\clawterm\config.json` (Windows) | [configuration.md](./reference/configuration.md) |
+| Config file | `~/.config/clawterm/config.json` | [configuration.md](./reference/configuration.md) |
 | Reload config without restart | `Mod+Shift+R` | [keybindings.md](./reference/keybindings.md) |
-| Primary modifier | `Cmd` on macOS, `Ctrl` on Windows and Linux | [`src/utils.ts`](../src/utils.ts) |
+| Primary modifier | `Cmd` (macOS-only) | [`src/utils.ts`](../src/utils.ts) |
 | Command palette | `Mod+Shift+P` | [keybindings.md](./reference/keybindings.md) |
 | Update check interval default | 1 hour | [configuration.md → updates](./reference/configuration.md#updates) |
 | Default worktree directory | `<parent-of-repo>/.clawterm-worktrees/<repo-name>/` (sibling, namespaced) | [configuration.md → worktree](./reference/configuration.md#worktree) |
@@ -81,10 +81,6 @@ xattr -cr /Applications/Clawterm.app
 
 Tracking: [#378](https://github.com/clawterm/clawterm/issues/378).
 
-### Windows: SmartScreen blocks the installer
-
-Clawterm isn't Authenticode-signed yet. Click **More info → Run anyway**. Tracking: [#379](https://github.com/clawterm/clawterm/issues/379).
-
 ### My config changes aren't taking effect
 
 Either reload the config with **`Mod+Shift+R`** or restart Clawterm. If a field was rejected as invalid, check the developer console — Clawterm logs every rejected field and the reason, then falls back to the default for that field (the rest of your config is still applied).
@@ -100,7 +96,7 @@ Possible causes:
 
 ### The shell I set in `config.json` is being ignored
 
-Clawterm validates the shell path at startup. If the path doesn't exist or isn't executable, it logs a warning, shows a toast, and falls back to the platform default (`/bin/zsh` on macOS/Linux, `powershell.exe` on Windows). Check that the path is absolute and the binary is executable.
+Clawterm validates the shell path at startup. If the path doesn't exist or isn't executable, it logs a warning, shows a toast, and falls back to `/bin/zsh`. Check that the path is absolute and the binary is executable.
 
 ### Agent status isn't updating / I'm not getting notifications
 
@@ -113,18 +109,14 @@ Clawterm validates the shell path at startup. If the path doesn't exist or isn't
 
 - Check `updates.autoCheck` is `true` and `updates.checkIntervalMs` is within the `5 min – 24 h` range. Values outside this range are clamped.
 - Trigger a manual check from the settings page.
-- If the update dialog never appears even when a newer version exists, look in `~/Library/Logs/clawterm/` (macOS) or the equivalent log directory on your platform.
+- If the update dialog never appears even when a newer version exists, look in `~/Library/Logs/clawterm/`.
 
 ### I broke my config and Clawterm won't start properly
 
 Clawterm is designed to **never refuse to start** because of a bad config — it logs rejected fields and falls back to defaults for those fields only. If you want to start fresh, delete the config file and relaunch:
 
 ```bash
-# macOS / Linux
 rm ~/.config/clawterm/config.json
-
-# Windows (PowerShell)
-Remove-Item "$env:APPDATA\clawterm\config.json"
 ```
 
 A fresh `config.json` is written on next launch with all defaults.

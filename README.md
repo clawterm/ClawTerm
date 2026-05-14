@@ -14,19 +14,13 @@ Vertical tabs with live agent status, split panes, per-pane context tracking, de
 
 ## Install
 
-**macOS:**
+Clawterm is **macOS only** (Apple Silicon and Intel).
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/clawterm/clawterm/main/install.sh | bash
 ```
 
-**Windows:**
-```powershell
-irm https://raw.githubusercontent.com/clawterm/clawterm/main/install.ps1 | iex
-```
-
-**Linux:** download the `.deb` or `.AppImage` from the [latest release](https://github.com/clawterm/clawterm/releases/latest).
-
-Or grab the DMG / EXE / `.deb` / `.AppImage` manually from the [latest release](https://github.com/clawterm/clawterm/releases/latest). Updates are automatic.
+Or grab the universal DMG manually from the [latest release](https://github.com/clawterm/clawterm/releases/latest). Updates are automatic.
 
 > **macOS note:** You may need `xattr -cr /Applications/Clawterm.app` to clear the quarantine flag until Apple notarization is set up.
 
