@@ -2187,6 +2187,23 @@ body {
   margin-bottom: var(--space-3);
 }
 
+/* Keyboard-shortcuts overlay (#514). Wider than the default confirm dialog
+   so the binding column has room, scrolls within the dialog rather than
+   pushing the dismiss hint out of the viewport. */
+.shortcuts-overlay {
+  width: 560px;
+  max-width: 90vw;
+  max-height: 80vh;
+  padding: var(--space-6) var(--space-7);
+}
+
+.shortcuts-overlay-body {
+  flex: 1;
+  overflow-y: auto;
+  margin: var(--space-3) calc(var(--space-7) * -1) var(--space-4);
+  padding: 0 var(--space-7);
+}
+
 .close-confirm-body {
   font-size: var(--font-md);
   color: var(--text-secondary);

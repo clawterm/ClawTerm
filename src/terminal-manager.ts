@@ -29,6 +29,7 @@ import { showToast } from "./toast";
 import { loadSession, saveSession, type SessionTab, type SessionV2 } from "./session";
 import { createProject, type Project } from "./project";
 import { createSettingsPanel } from "./shortcuts-panel";
+import { showShortcutsOverlay } from "./shortcuts-overlay";
 import { manualCheckForUpdates } from "./updater";
 import { showCommandPalette, type PaletteCommand } from "./command-palette";
 import { createKeyHandler, type KeybindingActions } from "./keybinding-handler";
@@ -123,6 +124,9 @@ export class TerminalManager {
   private lastTabSnapshot = "";
   private sessionTimer: ReturnType<typeof setTimeout> | null = null;
   private shortcutsPanel: { element: HTMLDivElement; destroy(): void } | null = null;
+  /** Read-only keyboard-shortcuts overlay (#514). Stores the dismiss thunk
+   *  so a second invocation of the menu toggles it off. */
+  private shortcutsOverlayDismiss: (() => void) | null = null;
   private creatingTab = false;
   private quitting = false;
   private handleKey!: (e: KeyboardEvent) => boolean;
@@ -1175,8 +1179,10 @@ export class TerminalManager {
     }
     switch (id) {
       case "toggleSettings":
-      case "showShortcuts":
         this.toggleSettingsPanel();
+        return;
+      case "showShortcuts":
+        this.openShortcutsOverlay();
         return;
       case "openConfigFile":
         this.openConfigFile();
@@ -1263,6 +1269,18 @@ export class TerminalManager {
       },
     });
     container.appendChild(this.shortcutsPanel.element);
+  }
+
+  /** Help → Show Keyboard Shortcuts: read-only overlay listing every binding
+   *  from config.keybindings. Separate from the settings panel so users can
+   *  browse without entering edit mode (#514). */
+  private openShortcutsOverlay() {
+    if (this.shortcutsOverlayDismiss) {
+      this.shortcutsOverlayDismiss();
+      this.shortcutsOverlayDismiss = null;
+      return;
+    }
+    this.shortcutsOverlayDismiss = showShortcutsOverlay(this.config);
   }
 
   private openCommandPalette() {

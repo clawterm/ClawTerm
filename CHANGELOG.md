@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Added
+- **Help → Show Keyboard Shortcuts opens a browseable overlay** of every binding in `config.keybindings`, grouped by Tabs / Projects / Panes / Terminal / Quick Commands, with live search. Reuses the data + formatter from the settings panel so the two surfaces never drift out of sync. Escape or click outside dismisses; selecting the menu item again toggles it closed. Distinct from the settings panel — read-only, focused on discoverability rather than editing (#514)
+
 ### Fixed
 - **Option-composed characters didn't reach the terminal on non-US Mac keyboards** — `\`, `|`, `@`, `{`, `}`, `[`, `]` and other Option-dead-key characters were getting swallowed because xterm was initialised with `macOptionIsMeta: true`, which tells it to emit Esc-prefixed sequences for Option+key instead of letting macOS produce the composed character. Norwegian Option+Shift+7 (`\`), German Option+L (`@`), French Option+5 (`{`), etc. now insert at the cursor in shells and Claude Code. Word-motion via Option+Arrow / Option+Backspace is preserved by the existing explicit handler in `pane.ts`, so no readline shortcuts regress (#513)
 

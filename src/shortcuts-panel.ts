@@ -17,19 +17,19 @@ export interface ShortcutsPanel {
   destroy(): void;
 }
 
-interface ShortcutEntry {
+export interface ShortcutEntry {
   label: string;
   binding: string;
   /** Key in Config.keybindings — present means the row is editable. */
   actionKey?: ActionKey;
 }
 
-interface ShortcutGroup {
+export interface ShortcutGroup {
   title: string;
   entries: ShortcutEntry[];
 }
 
-function formatBinding(raw: string): string {
+export function formatBinding(raw: string): string {
   if (!raw) return "—";
   return raw
     .replace(/cmd/gi, modLabel)
@@ -40,7 +40,7 @@ function formatBinding(raw: string): string {
     .toUpperCase();
 }
 
-function buildGroups(config: Config): ShortcutGroup[] {
+export function buildShortcutGroups(config: Config): ShortcutGroup[] {
   const kb = config.keybindings;
   return [
     {
@@ -114,7 +114,7 @@ function findConflict(config: Config, binding: string, exceptKey: ActionKey): Ac
 
 /** Look up the human-readable label for an action key (for conflict banners). */
 function labelForAction(config: Config, key: ActionKey): string {
-  for (const group of buildGroups(config)) {
+  for (const group of buildShortcutGroups(config)) {
     for (const entry of group.entries) {
       if (entry.actionKey === key) return entry.label;
     }
@@ -266,7 +266,7 @@ export function createSettingsPanel(opts: PanelOptions): ShortcutsPanel {
   function renderGroups() {
     rowsByAction.clear();
     groupsContainer.replaceChildren();
-    for (const group of buildGroups(config)) {
+    for (const group of buildShortcutGroups(config)) {
       const section = document.createElement("div");
       section.className = "shortcuts-group";
 
