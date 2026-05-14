@@ -775,6 +775,13 @@ export class TerminalManager {
       this.notifications.notifyCommandComplete(tab.title, tab.id, this.activeTabId === tab.id);
     };
 
+    tab.onOscNotification = (text) => {
+      // OSC 9;2 → system notification routed through NotificationManager,
+      // gated by config.notifications.types.agentWaiting (#517). The sidebar
+      // attention dot is handled separately via the onNeedsAttention path.
+      this.notifications.notifyAgentAttention(text, tab.title, tab.id, this.activeTabId === tab.id);
+    };
+
     tab.onOutputEvent = (event: OutputEvent) => {
       this.handleTabOutputEvent(id, tab, event);
     };

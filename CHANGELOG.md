@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+- **OSC 9;2 attention requests fire macOS notifications carrying the agent's message** — Claude Code (and other agents) emit OSC 9;2 with a payload describing *why* attention is needed; that payload used to be discarded and only the sidebar attention dot fired. Now the message text reaches a system notification routed through `NotificationManager`, gated by the previously dead `config.notifications.types.agentWaiting` knob. Active foreground tabs still suppress notifications (no point notifying about the tab you're already looking at); the sidebar dot continues to fire independently for background tabs (#517)
 - **Help → Show Keyboard Shortcuts opens a browseable overlay** of every binding in `config.keybindings`, grouped by Tabs / Projects / Panes / Terminal / Quick Commands, with live search. Reuses the data + formatter from the settings panel so the two surfaces never drift out of sync. Escape or click outside dismisses; selecting the menu item again toggles it closed. Distinct from the settings panel — read-only, focused on discoverability rather than editing (#514)
 
 ### Fixed

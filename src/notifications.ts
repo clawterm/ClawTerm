@@ -143,6 +143,27 @@ export class NotificationManager {
     }
   }
 
+  /** Notify on an OSC 9;2 attention request from an agent (Claude Code, etc.).
+   *  `text` is the message the agent put in the sequence — it reaches the
+   *  notification body so the user sees *why* attention is requested, not
+   *  just *that* attention is requested. Gated by the agentWaiting config
+   *  type, which was previously declared but unwired (#517). */
+  notifyAgentAttention(text: string, tabTitle: string, tabId: string, isActiveTab: boolean) {
+    logger.debug(`[notifyAgentAttention] tab=${tabId} title=${tabTitle} active=${isActiveTab}`);
+    if (!this.config.enabled) return;
+    if (isActiveTab && !document.hidden) return;
+    if (!this.config.types.agentWaiting.enabled) return;
+
+    if (this.permissionGranted) {
+      const body = text ? `${tabTitle}: ${text}` : `${tabTitle} needs attention`;
+      this.sendWithClickSupport("Clawterm", body, tabId);
+    }
+
+    if (this.config.sound && this.config.types.agentWaiting.sound) {
+      this.playTone("attention");
+    }
+  }
+
   /** Send a notification with click-to-focus support.
    *  Prefers the Web Notification API (reliable onclick in webviews).
    *  Falls back to the Tauri plugin if the Web API is unavailable. */

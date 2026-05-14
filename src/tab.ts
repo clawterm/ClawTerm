@@ -93,6 +93,10 @@ export class Tab {
   onExit: (() => void) | null = null;
   onTitleChange: ((title: string) => void) | null = null;
   onNeedsAttention: (() => void) | null = null;
+  /** Fires on every OSC 9;2 attention request from a pane, with the raw
+   *  message text. Forwarded to NotificationManager so the user sees a
+   *  system notification carrying the agent's message (#517). */
+  onOscNotification: ((text: string) => void) | null = null;
   onOutputEvent: ((event: OutputEvent) => void) | null = null;
   /** Fires on PTY activity for any pane in this tab — forwarded to the
    *  central poll loop's wake() so adaptive idle mode can break out
@@ -184,15 +188,19 @@ export class Tab {
     this.onOutputEvent?.(event);
   }
 
-  /** Handle OSC 9;2 notification — the agent explicitly wants attention. */
-  private handleOscNotification(_pane: Pane, _text: string) {
-    // Notifications will be redesigned in a future issue.
-    // For now, just surface attention for background tabs.
+  /** Handle OSC 9;2 notification — the agent explicitly wants attention.
+   *  Two surfaces fire here: the sidebar attention dot (for background tabs)
+   *  and a system notification carrying the message text (#517). */
+  private handleOscNotification(_pane: Pane, text: string) {
     const showGrace = Date.now() - this.lastShownAt < 3000;
     if (!this.isVisible && !this.transitioning && !this.muted && !showGrace) {
       this.state.needsAttention = true;
       this.onNeedsAttention?.();
     }
+    // Forward the payload to whoever subscribed (NotificationManager). The
+    // subscriber decides whether to fire a system notification based on the
+    // user's config and the active-tab/document-hidden state.
+    this.onOscNotification?.(text);
   }
 
   private updateTitle() {
