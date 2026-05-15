@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Changed
+- **Brand renamed Clawterm → ClawTerm** (capital T). Documentation, in-app strings, menus, window titles, and Tauri bundle metadata all use the new casing. The macOS bundle is now `ClawTerm.app` for fresh installs; the bundle identifier stays `com.clawterm.terminal` so the in-app updater rewrites your existing `Clawterm.app` in place and all user data and config persist across the rename. If you'd like a consistent filename you can quit ClawTerm, drag the old bundle to the Trash, and reinstall — but you don't have to (#524).
+
 ## [1.5.0] - 2026-05-15
 
 ### Added
