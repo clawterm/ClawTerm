@@ -126,6 +126,10 @@ export class TerminalManager {
   private unlistenFocus: (() => void) | null = null;
   private lastTabSnapshot = "";
   private sessionTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Secondary windows (label !== "main") don't load or persist session
+   *  state — only the main window owns session.json. Spawned via the
+   *  '+' button or Cmd+N, they're ephemeral by design for v1 (#522). */
+  private isSecondaryWindow = false;
   private shortcutsPanel: { element: HTMLDivElement; destroy(): void } | null = null;
   /** Read-only keyboard-shortcuts overlay (#514). Stores the dismiss thunk
    *  so a second invocation of the menu toggles it off. */
@@ -304,8 +308,11 @@ export class TerminalManager {
       showTabContextMenu: (e, id) => this.showTabContextMenu(e, id),
     });
 
-    // Start session load in parallel with synchronous DOM setup
-    const sessionPromise = loadSession();
+    this.isSecondaryWindow = getCurrentWindow().label !== "main";
+
+    // Start session load in parallel with synchronous DOM setup. Secondary
+    // windows skip session entirely and boot to a fresh project (#522).
+    const sessionPromise = this.isSecondaryWindow ? Promise.resolve(null) : loadSession();
 
     this.renderShell();
     // Apply sidebar mode classes now that #sidebar exists in the DOM (#346)
@@ -944,6 +951,7 @@ export class TerminalManager {
 
   private persistSession() {
     if (this.quitting) return;
+    if (this.isSecondaryWindow) return;
     // Debounce: multiple rapid calls (tab switch, create, close) coalesce
     // into a single write after 500ms of quiet
     if (this.sessionTimer) clearTimeout(this.sessionTimer);
@@ -959,6 +967,7 @@ export class TerminalManager {
       clearTimeout(this.sessionTimer);
       this.sessionTimer = null;
     }
+    if (this.isSecondaryWindow) return;
     const snapshot = this.buildSessionSnapshot();
     if (snapshot.projects.length > 0) {
       await saveSession(snapshot);
