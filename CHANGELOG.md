@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-05-15
+
+### Added
+- **Multiple Clawterm windows** — drag a terminal to a second monitor and watch it while you work on the primary. Click the `+` button at the right of the titlebar (or `Cmd+N`, or `File → New Window` in the menu bar) to spawn an additional window. Each window has its own tabs, panes, and PTYs; PTY ownership stays scoped to the window that created the pane, so closing one window can't kill terminals running in the other. Only the main window owns `session.json` — secondary windows are ephemeral by design, so on next launch you get back exactly what you had in the main window (plus a fresh empty secondary if you want one). Process-wide startup (PTY session cleanup, the auto-updater, analytics) runs only in the main window so opening a second window can't double-fire or nuke the main window's PTYs (#522)
+
+### Changed
+- **Closing the last tab now closes the window** instead of spawning a fresh tab. Matches Warp / iTerm2 / Wezterm / Terminal.app convention, and is the obvious behavior once multi-window exists — a secondary window's last-tab-close should disappear the window, not leave you stuck on an empty one. For the main window this quits the app, same as `Cmd+Q`. Uses `WebviewWindow::destroy()` rather than `close()` because the `onCloseRequested` hook calls `manager.dispose()` and re-entering teardown while already mid-cleanup left the window frozen-but-alive (#522)
+
+### Fixed
+- **macOS menu shortcuts no longer fire in every open window** — the menu is process-level on macOS, but `on_menu_event` was broadcasting `menu-action` to every webview via `app.emit`. With two windows open, pressing `Cmd+W` in one would close a tab in *both*; same for every menu-bound action. The frontend now tracks per-window focus via `onFocusChanged` and the menu-action listener early-returns unless that window is the focused one — only the window the user's actually looking at acts on the keystroke (#522)
+- **macOS menu state no longer flickers between windows** — `applyMenuAccelerators` and `updateMenuDisabled` push state to the (process-level) menu, so a background window's render could clobber whatever the focused window had just installed. Both now gate on the local `isWindowFocused` flag, and a focus swap force-refreshes the menu so the dim/accel state always reflects the window you're actually looking at (#522)
+
+
 ## [1.4.3] - 2026-05-15
 
 ### Added
@@ -1210,7 +1223,8 @@ This release establishes Clawterm's visual identity, transforming the app from a
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v1.4.3...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/clawterm/clawterm/compare/v1.4.3...v1.5.0
 [1.4.3]: https://github.com/clawterm/clawterm/compare/v1.4.2...v1.4.3
 [1.4.2]: https://github.com/clawterm/clawterm/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/clawterm/clawterm/compare/v1.4.0...v1.4.1
