@@ -3,24 +3,27 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ClawTerm — A terminal for managing AI agents</title>
-  <meta name="description" content="A terminal for running many AI agents at once and keeping track of them. Vertical tabs with live status, split panes, per-pane context tracking, desktop notifications, and auto-updates.">
-  <meta property="og:title" content="ClawTerm — A terminal for managing AI agents">
-  <meta property="og:description" content="A terminal for running many AI agents at once and keeping track of them.">
-  <meta property="og:image" content="https://clawterm.github.io/clawterm/screenshots/clawterm.png">
+  <title>ClawTerm — A Mac-native terminal for running many AI agents at once</title>
+  <meta name="description" content="ClawTerm is a Mac-native terminal workspace built for developers running many AI agents at once. Vertical tabs with live agent status, split panes, per-pane context tracking, and desktop notifications.">
+  <meta property="og:title" content="ClawTerm — A Mac-native terminal for running many AI agents at once">
+  <meta property="og:description" content="A calmer Mac terminal for serious command-line work. Built around running and tracking many AI agents at once.">
+  <meta property="og:image" content="https://clawterm.github.io/clawterm/brand/og-image.png">
   <meta property="og:url" content="https://clawterm.github.io/clawterm/">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="ClawTerm — A terminal for managing AI agents">
-  <meta name="twitter:description" content="A terminal for running many AI agents at once and keeping track of them.">
-  <meta name="twitter:image" content="https://clawterm.github.io/clawterm/screenshots/clawterm.png">
-  <meta name="theme-color" content="#0c0c0e">
+  <meta name="twitter:title" content="ClawTerm — A Mac-native terminal for running many AI agents at once">
+  <meta name="twitter:description" content="A calmer Mac terminal for serious command-line work. Built around running and tracking many AI agents at once.">
+  <meta name="twitter:image" content="https://clawterm.github.io/clawterm/brand/og-image.png">
+  <meta name="theme-color" content="#050607">
   <link rel="canonical" href="https://clawterm.github.io/clawterm/">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <link rel="icon" type="image/png" sizes="512x512" href="favicon.png">
+  <link rel="icon" type="image/png" sizes="96x96" href="favicon-96x96.png">
+  <link rel="shortcut icon" href="favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="manifest" href="site.webmanifest">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;590;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;590;600;800&display=swap" rel="stylesheet">
   <!-- Privacy-friendly analytics by Plausible -->
   <script async src="https://plausible.io/js/pa-YbvLcN8JR7kX94JxIPUIL.js"></script>
   <script>
@@ -33,7 +36,7 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "ClawTerm",
-    "description": "A terminal for running many AI agents at once and keeping track of them. Vertical tabs with live status, split panes, per-pane context tracking, desktop notifications, and auto-updates.",
+    "description": "A Mac-native terminal workspace for running many AI agents at once. Vertical tabs with live agent status, split panes, per-pane context tracking, desktop notifications, and auto-updates.",
     "url": "https://clawterm.github.io/clawterm/",
     "applicationCategory": "DeveloperApplication",
     "operatingSystem": "macOS",
@@ -48,18 +51,19 @@
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
     :root {
-      --bg: #0c0c0e;
-      --surface: #131316;
-      --border: rgba(244, 245, 248, 0.06);
-      --border-hover: rgba(244, 245, 248, 0.12);
-      --text: #f7f8f8;
-      --text-secondary: #8a8f98;
-      --text-dim: rgba(244, 245, 248, 0.45);
-      --accent: #E8364F;
-      --accent-hover: #D42E45;
-      --accent-glow: rgba(232, 54, 79, 0.06);
-      --mono: "SF Mono", "Fira Code", "Cascadia Code", "JetBrains Mono", "Menlo", "Consolas", monospace;
-      --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      --bg: #050607;
+      --surface: #0b0d0e;
+      --panel: #111315;
+      --border: #2a2e31;
+      --text: #f4f4f5;
+      --text-secondary: #9ca3af;
+      --text-dim: rgba(244, 244, 245, 0.45);
+      --accent: #7cff4f;
+      --accent-hover: #8fff6a;
+      --accent-on: #050607;
+      --sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", system-ui, sans-serif;
+      --mono: "SFMono-Regular", ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+      --wordmark: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
       --ease: cubic-bezier(0.25, 0.46, 0.45, 0.94);
     }
 
@@ -79,7 +83,7 @@
 
     ::selection {
       background: var(--accent);
-      color: #fff;
+      color: var(--accent-on);
     }
 
     a { color: var(--text-secondary); text-decoration: none; transition: color 0.16s var(--ease); }
@@ -89,20 +93,28 @@
       outline-offset: 2px;
     }
 
-    /* ── Logo (top right) ── */
+    /* ── Logo (top right): icon + wordmark ── */
     .logo {
       position: fixed;
       top: 24px;
       right: 32px;
-      font-family: var(--mono);
-      font-size: 15px;
-      font-weight: 590;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-family: var(--wordmark);
+      font-size: 18px;
+      font-weight: 800;
       color: var(--text);
-      letter-spacing: -0.01em;
+      letter-spacing: -0.06em;
       z-index: 10;
     }
     .logo:hover { color: var(--text); }
-    .logo span { color: var(--accent); }
+    .logo img {
+      width: 26px;
+      height: 26px;
+      display: block;
+      border-radius: 6px;
+    }
 
     /* ── Main layout ── */
     .page {
@@ -117,7 +129,7 @@
       gap: 56px;
     }
 
-    /* ── Left: video ── */
+    /* ── Left: product screenshot ── */
     .video-side {
       flex: 1.2;
       min-width: 0;
@@ -133,9 +145,7 @@
       border: 1px solid var(--border);
       overflow: hidden;
       background: var(--surface);
-      box-shadow:
-        0 0 120px var(--accent-glow),
-        0 32px 64px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 32px 64px rgba(0, 0, 0, 0.5);
     }
     .demo-video img {
       display: block;
@@ -162,10 +172,6 @@
       color: var(--text);
       text-wrap: pretty;
     }
-    .headline em {
-      font-style: normal;
-      color: var(--accent);
-    }
 
     .btn-github {
       display: inline-flex;
@@ -178,16 +184,15 @@
       font-weight: 590;
       letter-spacing: -0.01em;
       background: var(--accent);
-      color: #fff;
-      transition: background 0.16s var(--ease), box-shadow 0.16s var(--ease);
+      color: var(--accent-on);
+      transition: background 0.16s var(--ease);
       border: none;
       width: fit-content;
       cursor: pointer;
     }
     .btn-github:hover {
       background: var(--accent-hover);
-      color: #fff;
-      box-shadow: 0 4px 24px rgba(232, 54, 79, 0.2);
+      color: var(--accent-on);
     }
     .btn-github svg {
       width: 18px;
@@ -206,7 +211,7 @@
       text-decoration: underline;
       text-decoration-thickness: 1px;
       text-underline-offset: 2.5px;
-      text-decoration-color: var(--border-hover);
+      text-decoration-color: var(--border);
       transition: color 0.16s var(--ease), text-decoration-color 0.16s var(--ease);
     }
     .contact a:hover {
@@ -228,7 +233,7 @@
         top: auto;
         right: auto;
         padding: 20px 24px 0;
-        text-align: right;
+        justify-content: flex-end;
       }
       .page {
         flex-direction: column;
@@ -250,7 +255,8 @@
 
     /* ── Responsive: phones ── */
     @media (max-width: 480px) {
-      .logo { padding: 16px 20px 0; font-size: 14px; }
+      .logo { padding: 16px 20px 0; font-size: 16px; }
+      .logo img { width: 22px; height: 22px; }
       .page {
         padding: 16px 20px 40px;
         gap: 28px;
@@ -268,7 +274,10 @@
 </head>
 <body>
 
-<a href="/" class="logo" aria-label="ClawTerm home"><span>&gt;</span>clawterm</a>
+<a href="/" class="logo" aria-label="ClawTerm home">
+  <img src="favicon-96x96.png" alt="" aria-hidden="true" width="26" height="26">
+  <span>ClawTerm</span>
+</a>
 
 <main class="page">
   <div class="video-side">
@@ -279,7 +288,7 @@
 
   <div class="text-side">
     <p class="headline">
-      Come collaborate with me on <em>ClawTerm</em> &mdash; a terminal for running many AI agents at once and keeping track of them.
+      ClawTerm is a Mac-native terminal workspace &mdash; the best way to run many AI agents at once and keep track of them.
     </p>
 
     <a href="https://github.com/clawterm/clawterm" class="btn-github">
