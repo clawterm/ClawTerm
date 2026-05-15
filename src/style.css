@@ -1,9 +1,7 @@
 :root {
   /* ── ClawTerm Brand Palette ──────────────────────────────────────────── */
 
-  /* Surfaces — clear hierarchy: base < surface < elevated.
-     New dark scale per docs/brand.md — meaningfully darker than the
-     previous palette so the green active signal reads cleanly. */
+  /* Surfaces — clear hierarchy: base < surface < elevated. */
   --bg-base: #050607;
   --bg-surface: #0b0d0e;
   --bg-elevated: #111315;
@@ -11,29 +9,20 @@
   --bg-hover: rgba(255, 255, 255, 0.06);
   --bg-active: rgba(255, 255, 255, 0.1);
 
-  /* Text — primary + muted are the documented brand tokens
-     (#F4F4F5 / #9CA3AF). The rgba scale below is kept for legacy
-     call sites that need translucent text over arbitrary surfaces. */
-  --text: #f4f4f5;
-  --text-muted: #9ca3af;
+  /* Text — translucent so it reads correctly over arbitrary surfaces. */
   --text-primary: rgba(244, 244, 245, 0.9);
   --text-secondary: rgba(244, 244, 245, 0.55);
   --text-tertiary: rgba(244, 244, 245, 0.35);
 
-  /* Accent — Command Green. Reserved for active state: active tab,
-     focused pane, primary execution CTA, terminal cursor, focus ring,
-     and status indicators. Decoration must not use this token; see
-     docs/brand.md § Green-usage rule. */
+  /* Accent — Command Green. Reserved for active state only. */
   --accent: #7cff4f;
   --accent-hover: #8fff6a;
   --accent-muted: rgba(124, 255, 79, 0.12);
   --accent-border: rgba(124, 255, 79, 0.35);
   --accent-on: #050607;
 
-  /* Borders — kept deliberately quiet (Mac-utility restraint, see
-     docs/brand.md). Solid --border for opaque separators; the rgba
-     pair below for subtle overlays where tinting matters more than
-     exact color. */
+  /* Borders — solid --border for opaque separators; the rgba pair for
+     subtle overlays where tinting matters more than exact color. */
   --border: #22262a;
   --border-subtle: rgba(255, 255, 255, 0.06);
   --border-default: rgba(255, 255, 255, 0.09);
@@ -59,10 +48,9 @@
   accent-color: var(--accent);
 
   /* ── Typography ──────────────────────────────────────────────────────── */
-  /* All UI is JetBrains Mono — every glyph is monospaced from sidebar
-     labels to wordmark. The brand identity is "technical voice, typewriter
-     calm". The --font-ui / --font-mono split is preserved as a semantic
-     hint for future callers, but both resolve to the same stack today. */
+  /* --font-ui and --font-mono resolve to the same stack today — the split
+     is kept so future surfaces (e.g. a docs viewer) can adopt a sans
+     without touching every UI rule. */
   --font-ui: "JetBrains Mono Variable", "JetBrains Mono", "SFMono-Regular", ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
   --font-mono: "JetBrains Mono Variable", "JetBrains Mono", "SFMono-Regular", ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
   --font-2xs: 8px;
@@ -1328,10 +1316,7 @@ body {
   background: var(--scrollbar-thumb-hover);
 }
 
-/* Focused pane indicator — slightly lighter surface plus a dark-green
-   border tint so the active terminal is immediately identifiable.
-   Focused pane is a primary chrome element per docs/brand.md, so green
-   is the correct accent here. */
+/* Focused pane indicator — lifts the surface and tints the border green. */
 .pane-focused {
   background: var(--bg-elevated);
   border-color: var(--accent-border);

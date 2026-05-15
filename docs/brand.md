@@ -49,15 +49,17 @@ The canonical raster source is `docs/brand/logoclawterm.png` (1024×1024). The m
 
 Defined in `src/style.css :root`. Reference via `var(--*)` only — the lint script fails CI on hardcoded hex values outside `:root`.
 
-| Role       | Token             | Value           | Use                              |
-|------------|-------------------|-----------------|----------------------------------|
-| Background | `--bg-base`       | `#050607`       | App background                   |
-| Surface    | `--bg-surface`    | `#0B0D0E`       | Terminal window, panel surface   |
-| Panel      | `--bg-elevated`   | `#111315`       | Sidebar, cards, title bar, focused pane, hover |
-| Border     | `--border`        | `#2A2E31`       | Separators, subtle borders       |
-| Text       | `--text`          | `#F4F4F5`       | Primary text                     |
-| Muted text | `--text-muted`    | `#9CA3AF`       | Secondary text                   |
-| **Accent** | `--accent`        | **`#7CFF4F`** Command Green | **Active state only** (see green-usage rule below) |
+| Role       | Token              | Value                        | Use                              |
+|------------|--------------------|------------------------------|----------------------------------|
+| Background | `--bg-base`        | `#050607`                    | App background                   |
+| Surface    | `--bg-surface`     | `#0B0D0E`                    | Panel surface (terminal interior runs one notch darker, `#07080A`, set in `src/config.ts`) |
+| Panel      | `--bg-elevated`    | `#111315`                    | Sidebar, cards, title bar, focused pane, hover |
+| Border     | `--border`         | `#22262A`                    | Solid separators                 |
+| Border (overlay) | `--border-subtle` / `--border-default` | rgba 6% / 9% white | Subtle overlays on arbitrary surfaces |
+| Text       | `--text-primary`   | rgba(244,244,245,0.9)        | Primary text                     |
+| Muted text | `--text-secondary` | rgba(244,244,245,0.55)       | Secondary text                   |
+| Dim text   | `--text-tertiary`  | rgba(244,244,245,0.35)       | Tertiary / disabled              |
+| **Accent** | `--accent`         | **`#7CFF4F`** Command Green  | **Active state only** (see green-usage rule below) |
 
 ### Existing status tokens stay as is
 

@@ -1,12 +1,13 @@
 #!/bin/sh
-# Brand-name guard (#494, #524).
+# Brand-name guard.
 #
 # Canonical capitalization is "ClawTerm" (capital T). The old "Clawterm"
 # form is wrong and tends to creep back in via auto-capitalization or
-# copy-paste of historical strings. The brand book at docs/brand.md
-# is the only file allowed to mention `Clawterm` (it documents the rule).
-# Shipped CHANGELOG.md entries are exempt too — they're historical
-# release notes and should not be retroactively rewritten.
+# copy-paste of historical strings.
+#
+# Exempt files:
+# - docs/brand.md documents both spellings explicitly.
+# - CHANGELOG.md preserves shipped release notes intact.
 #
 # Lowercase `clawterm` is fine in identifier-safe contexts (paths, URLs,
 # package names, bundle ids, CSS class names) so the match is word-bounded
@@ -22,8 +23,7 @@ violations=$(grep -rwn "Clawterm" \
   --exclude-dir=.git --exclude-dir=.clawterm-worktrees --exclude-dir=.claude \
   --exclude-dir=gen \
   . 2>/dev/null \
-  | grep -v '^\./docs/brand\.md:' \
-  | grep -v '^\./CHANGELOG\.md:' \
+  | grep -Ev '^\./(docs/brand|CHANGELOG)\.md:' \
   || true)
 
 if [ -n "$violations" ]; then
