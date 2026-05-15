@@ -1,6 +1,6 @@
 # Architecture
 
-A single-page tour of how Clawterm is put together. Read this once before changing any code that touches tabs, panes, polling, the show/hide pipeline, the PTY layer, or session persistence.
+A single-page tour of how ClawTerm is put together. Read this once before changing any code that touches tabs, panes, polling, the show/hide pipeline, the PTY layer, or session persistence.
 
 > **Source-of-truth invariant.** When this document and the code disagree, the code wins. Update this page in the same commit that changes the design.
 

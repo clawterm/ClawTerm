@@ -28,7 +28,7 @@ const sidebar = [
 ];
 
 export default defineConfig({
-  title: "Clawterm",
+  title: "ClawTerm",
   description: "A terminal for managing AI coding agents.",
   // Pages site is /clawterm/, docs nest at /clawterm/docs/.
   base: "/clawterm/docs/",
@@ -55,7 +55,7 @@ export default defineConfig({
   },
 
   themeConfig: {
-    siteTitle: "Clawterm Docs",
+    siteTitle: "ClawTerm Docs",
     nav: [
       { text: "Home", link: "https://clawterm.github.io/clawterm/" },
       { text: "GitHub", link: "https://github.com/clawterm/clawterm" },

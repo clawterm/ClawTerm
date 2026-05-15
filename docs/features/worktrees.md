@@ -1,6 +1,6 @@
 # Worktrees
 
-Clawterm uses [git worktrees](https://git-scm.com/docs/git-worktree) to give each agent its own working directory and branch on the same repository, without the cost of a fresh clone or the friction of `git stash`/`git checkout`. This page is the single source of truth for how worktrees work in the app.
+ClawTerm uses [git worktrees](https://git-scm.com/docs/git-worktree) to give each agent its own working directory and branch on the same repository, without the cost of a fresh clone or the friction of `git stash`/`git checkout`. This page is the single source of truth for how worktrees work in the app.
 
 > **TL;DR** — `Cmd+Shift+N` opens the new-worktree dialog, picks (or creates) a branch, and opens a tab in `<parent-of-repo>/.clawterm-worktrees/<repo-name>/<branch>/`. The location is configurable via `worktree.directory`. Existing worktrees from older installs continue to work unchanged.
 
@@ -12,7 +12,7 @@ Running multiple coding agents against the same repo means each one needs:
 - **Its own filesystem state** — file edits, build artifacts, dependency installs all need to be isolated
 - **Fast startup** — fresh `git clone` is too slow to do interactively per agent
 
-`git worktree` is the right primitive: it creates a second working directory backed by the same `.git`, so branches and history are shared but file state is isolated. Clawterm wraps the lifecycle (create / lock / unlock / remove) and resolves the location automatically.
+`git worktree` is the right primitive: it creates a second working directory backed by the same `.git`, so branches and history are shared but file state is isolated. ClawTerm wraps the lifecycle (create / lock / unlock / remove) and resolves the location automatically.
 
 ## Where worktrees live
 
@@ -94,7 +94,7 @@ The frontend calls this through `invokeWithTimeout("create_worktree", ..., 10000
 
 ## Locking
 
-After creation succeeds, the frontend immediately calls `invoke("lock_worktree", ...)`. This runs `git worktree lock --reason "In use by Clawterm"` on the new worktree. The lock prevents `git worktree remove` (without `--force`) from succeeding — protection against an agent or script in another pane accidentally deleting the worktree someone else is editing.
+After creation succeeds, the frontend immediately calls `invoke("lock_worktree", ...)`. This runs `git worktree lock --reason "In use by ClawTerm"` on the new worktree. The lock prevents `git worktree remove` (without `--force`) from succeeding — protection against an agent or script in another pane accidentally deleting the worktree someone else is editing.
 
 The lock is **released** in three places:
 
@@ -112,7 +112,7 @@ When a tab containing a worktree pane is closed (`Tab.onPaneClose` callback in `
 2. **Cross-tab check** — does another tab still use this worktree (`isWorktreeInUse()` in `worktree.rs`)? If yes, do nothing.
 3. **`autoCleanup` check** — if the config flag is `true`, run `unlockAndRemoveWorktree()`. If `false` (default), just `unlockWorktree()` so the directory survives for manual cleanup.
 
-`autoCleanup` defaults to `false` because deleting an active worktree is a destructive operation Clawterm can't always tell apart from "the user is just closing the tab to free a slot in the sidebar." Set it to `true` only if your workflow is "agent finishes → I'm done with this branch."
+`autoCleanup` defaults to `false` because deleting an active worktree is a destructive operation ClawTerm can't always tell apart from "the user is just closing the tab to free a slot in the sidebar." Set it to `true` only if your workflow is "agent finishes → I'm done with this branch."
 
 ## Persistence
 
@@ -131,13 +131,13 @@ Worktree metadata is persisted on a per-tab and per-pane basis in [`session.json
 
 The same fields exist on `SessionSplitLeaf` for split panes that own a worktree independently.
 
-On session restore (`restoreOneTab()` in `terminal-manager.ts`), Clawterm:
+On session restore (`restoreOneTab()` in `terminal-manager.ts`), ClawTerm:
 
 1. Validates that the saved cwd still exists (`validate_dir`); falls back to `$HOME` if not
 2. Re-creates the tab in that cwd
 3. Re-attaches the saved `worktreePath` and `repoRoot` to the tab and its initial pane
 
-The resolver does **not** run on restore — it only runs at *creation* time. This means existing worktrees from older Clawterm versions (when the default was `.clawterm-worktrees` inside the repo) continue to work indefinitely. The next worktree you create after upgrading uses the new sibling layout, but the old ones stay where they are.
+The resolver does **not** run on restore — it only runs at *creation* time. This means existing worktrees from older ClawTerm versions (when the default was `.clawterm-worktrees` inside the repo) continue to work indefinitely. The next worktree you create after upgrading uses the new sibling layout, but the old ones stay where they are.
 
 ## The legacy migration hint
 
@@ -189,7 +189,7 @@ Keybinding (under `keybindings`):
 
 ### "I'm starting a new agent task — give me a fresh branch"
 
-`Cmd+Shift+N` → type a new branch name → pick base branch (usually `main`) → optionally type `claude` in the agent field → Enter. Clawterm creates the worktree, opens a tab in it, and runs `claude` for you.
+`Cmd+Shift+N` → type a new branch name → pick base branch (usually `main`) → optionally type `claude` in the agent field → Enter. ClawTerm creates the worktree, opens a tab in it, and runs `claude` for you.
 
 ### "I want two agents on the same task, comparing approaches"
 

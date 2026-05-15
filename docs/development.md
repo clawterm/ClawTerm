@@ -1,6 +1,6 @@
 # Development guide
 
-How to be productive in the Clawterm codebase. Aimed at new contributors and AI agents — designed so you can get to "running dev build, tests passing, know where to look" in about ten minutes.
+How to be productive in the ClawTerm codebase. Aimed at new contributors and AI agents — designed so you can get to "running dev build, tests passing, know where to look" in about ten minutes.
 
 > If you're trying to understand *what* the code does instead of *how to work on it*, start with [`architecture.md`](./architecture.md).
 
@@ -38,7 +38,7 @@ This:
 
 1. Starts the Vite dev server on `http://localhost:1420` (`vite.config.ts:16`, strict port — fails if 1420 is taken)
 2. Compiles the Rust backend (`src-tauri/`) — first build is slow, subsequent rebuilds use `sccache` if installed
-3. Launches the Clawterm desktop app pointing at the dev server
+3. Launches the ClawTerm desktop app pointing at the dev server
 
 **Hot reload behaviour**:
 
@@ -157,7 +157,7 @@ Takes ~50–200 ms total. Much faster than killing and restarting the dev build.
 | Custom themes | `~/.config/clawterm/themes/` | `%APPDATA%\clawterm\themes\` |
 | Webview logs (Tauri) | `~/Library/Logs/com.clawterm.clawterm/` | `%LOCALAPPDATA%\com.clawterm.clawterm\logs\` |
 
-Resetting Clawterm completely:
+Resetting ClawTerm completely:
 
 ```bash
 # macOS / Linux

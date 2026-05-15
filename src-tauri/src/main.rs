@@ -90,7 +90,7 @@ fn clear_session() -> Result<(), String> {
 /// Set up the Claude Code status line script and configure settings.json
 #[tauri::command]
 fn setup_claude_statusline() -> Result<(), String> {
-    // Drop any leftover <pid>.json files from previous Clawterm sessions
+    // Drop any leftover <pid>.json files from previous ClawTerm sessions
     // whose Claude Code processes are gone. Without this, the directory
     // grows monotonically over time. (#521)
     process_info::sweep_stale_claude_status_files();

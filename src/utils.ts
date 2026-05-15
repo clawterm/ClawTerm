@@ -37,7 +37,7 @@ export async function getLiveCwd(shellPid: number, timeoutMs: number): Promise<s
   }
 }
 
-/** Whether the current platform is macOS. Clawterm is macOS-only; kept as a
+/** Whether the current platform is macOS. ClawTerm is macOS-only; kept as a
  *  constant so legacy callers don't have to be rewritten, but it's always
  *  true in shipped builds (#515). */
 export const isMac = true;

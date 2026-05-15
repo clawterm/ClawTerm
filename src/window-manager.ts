@@ -21,7 +21,7 @@ export async function openNewWindow(): Promise<void> {
   const label = await nextLabel();
   const w = new WebviewWindow(label, {
     url: "index.html",
-    title: "Clawterm",
+    title: "ClawTerm",
     width: 1100,
     height: 700,
     minWidth: 600,

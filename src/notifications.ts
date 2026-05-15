@@ -118,7 +118,7 @@ export class NotificationManager {
 
     if (this.permissionGranted) {
       const message = EVENT_MESSAGES[event.type] ?? event.detail;
-      this.sendWithClickSupport("Clawterm", `${tabTitle}: ${message}`, tabId);
+      this.sendWithClickSupport("ClawTerm", `${tabTitle}: ${message}`, tabId);
     }
 
     // Sound
@@ -135,7 +135,7 @@ export class NotificationManager {
     if (!this.config.types.completion.enabled) return;
 
     if (this.permissionGranted) {
-      this.sendWithClickSupport("Clawterm", `Command finished in: ${tabTitle}`, tabId);
+      this.sendWithClickSupport("ClawTerm", `Command finished in: ${tabTitle}`, tabId);
     }
 
     if (this.config.sound && this.config.types.completion.sound) {
@@ -156,7 +156,7 @@ export class NotificationManager {
 
     if (this.permissionGranted) {
       const body = text ? `${tabTitle}: ${text}` : `${tabTitle} needs attention`;
-      this.sendWithClickSupport("Clawterm", body, tabId);
+      this.sendWithClickSupport("ClawTerm", body, tabId);
     }
 
     if (this.config.sound && this.config.types.agentWaiting.sound) {

@@ -235,7 +235,7 @@ pub fn list_branches(repo_dir: String) -> Result<Vec<BranchInfo>, String> {
 #[tauri::command]
 pub fn lock_worktree(repo_dir: String, worktree_path: String) -> Result<(), String> {
     let output = Command::new("git")
-        .args(["worktree", "lock", "--reason", "In use by Clawterm", &worktree_path])
+        .args(["worktree", "lock", "--reason", "In use by ClawTerm", &worktree_path])
         .current_dir(&repo_dir)
         .output()
         .map_err(|e| format!("git worktree lock failed: {}", e))?;

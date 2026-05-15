@@ -1,10 +1,10 @@
 # Installation and updates
 
-Clawterm ships pre-built binaries for macOS (Apple Silicon and Intel), Windows (x64), and Linux (x64, `.deb` and `.AppImage`).
+ClawTerm ships pre-built binaries for macOS (Apple Silicon and Intel), Windows (x64), and Linux (x64, `.deb` and `.AppImage`).
 
 ## macOS
 
-One-liner installer (downloads the latest DMG, verifies the SHA-256 checksum against the release's `checksums-universal-apple-darwin.txt`, copies `Clawterm.app` into `/Applications`, and clears the quarantine flag):
+One-liner installer (downloads the latest DMG, verifies the SHA-256 checksum against the release's `checksums-universal-apple-darwin.txt`, copies `ClawTerm.app` into `/Applications`, and clears the quarantine flag):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/clawterm/clawterm/main/install.sh | bash
@@ -12,12 +12,12 @@ curl -fsSL https://raw.githubusercontent.com/clawterm/clawterm/main/install.sh |
 
 If you'd rather install by hand, download `Clawterm_<version>_universal.dmg` from the [latest release](https://github.com/clawterm/clawterm/releases/latest) — a single universal build that runs on both Apple Silicon and Intel Macs.
 
-Mount the DMG and drag `Clawterm.app` into `/Applications`.
+Mount the DMG and drag `ClawTerm.app` into `/Applications`.
 
-> **Gatekeeper note:** Clawterm is not yet Apple-notarized. If macOS refuses to launch it, clear the quarantine flag once:
+> **Gatekeeper note:** ClawTerm is not yet Apple-notarized. If macOS refuses to launch it, clear the quarantine flag once:
 >
 > ```bash
-> xattr -cr /Applications/Clawterm.app
+> xattr -cr /Applications/ClawTerm.app
 > ```
 >
 > Tracking issue: [#378](https://github.com/clawterm/clawterm/issues/378).
@@ -32,7 +32,7 @@ The script downloads the latest `Clawterm_<version>_x64-setup.exe`, verifies the
 
 You can also download the installer manually from the [latest release](https://github.com/clawterm/clawterm/releases/latest).
 
-> **SmartScreen note:** Clawterm is not yet Authenticode-signed. Windows may show a SmartScreen warning the first time you run the installer. Click **More info → Run anyway**. Tracking issue: [#379](https://github.com/clawterm/clawterm/issues/379).
+> **SmartScreen note:** ClawTerm is not yet Authenticode-signed. Windows may show a SmartScreen warning the first time you run the installer. Click **More info → Run anyway**. Tracking issue: [#379](https://github.com/clawterm/clawterm/issues/379).
 
 ## Linux
 
@@ -83,7 +83,7 @@ The one-liner installers above do this automatically and abort on mismatch.
 
 ## Updates
 
-Clawterm checks for updates automatically once an hour by default. When a new version is available, a dialog appears with the release notes and an **Install** button.
+ClawTerm checks for updates automatically once an hour by default. When a new version is available, a dialog appears with the release notes and an **Install** button.
 
 Update behaviour is controlled by the `updates` section in `config.json` — see [configuration.md → updates](../reference/configuration.md#updates) for the full schema. Summary:
 
@@ -111,7 +111,7 @@ If the installed version already matches the latest release, the script exits wi
 curl -fsSL https://raw.githubusercontent.com/clawterm/clawterm/main/install.sh | bash -s -- --uninstall
 ```
 
-This removes `/Applications/Clawterm.app` and prompts before deleting `~/.config/clawterm` (so your config survives unless you say otherwise).
+This removes `/Applications/ClawTerm.app` and prompts before deleting `~/.config/clawterm` (so your config survives unless you say otherwise).
 
 **Windows:**
 
@@ -125,6 +125,6 @@ Or uninstall from **Settings → Apps** like any other Windows app. The config a
 
 | Platform | App | Config |
 | --- | --- | --- |
-| macOS | `/Applications/Clawterm.app` | `~/.config/clawterm/` |
+| macOS | `/Applications/ClawTerm.app` | `~/.config/clawterm/` |
 | Windows | Uninstalled via Add/Remove Programs | `%APPDATA%\clawterm\` |
 | Linux | `/usr/bin/clawterm` (`.deb`) or wherever you placed the `.AppImage` | `~/.config/clawterm/` |

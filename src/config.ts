@@ -29,7 +29,7 @@ const defaultFontFamily = '"JetBrains Mono Variable", "JetBrains Mono", monospac
 const _defaultShell = defaultShell();
 
 /**
- * Clawterm's fixed terminal color palette — tuned to the brand dark palette.
+ * ClawTerm's fixed terminal color palette — tuned to the brand dark palette.
  * Used by xterm.js for ANSI color rendering. Not user-configurable.
  */
 export const TERMINAL_THEME = {

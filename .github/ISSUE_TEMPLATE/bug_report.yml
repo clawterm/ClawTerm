@@ -15,7 +15,7 @@ body:
       label: Steps to reproduce
       description: How can we reproduce this?
       placeholder: |
-        1. Open Clawterm
+        1. Open ClawTerm
         2. ...
         3. See error
     validations:
@@ -30,8 +30,8 @@ body:
   - type: input
     id: version
     attributes:
-      label: Clawterm version
-      description: "Run: About Clawterm or check the title bar"
+      label: ClawTerm version
+      description: "Run: About ClawTerm or check the title bar"
       placeholder: "e.g. 0.4.1"
     validations:
       required: true

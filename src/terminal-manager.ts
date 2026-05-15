@@ -947,7 +947,7 @@ export class TerminalManager {
     setTimeout(() => {
       const msg = [
         "",
-        "\x1b[1m  Welcome to Clawterm\x1b[0m",
+        "\x1b[1m  Welcome to ClawTerm\x1b[0m",
         "",
         `  \x1b[36m${mod}+T\x1b[0m  New tab        \x1b[36m${mod}+D\x1b[0m  Split pane`,
         `  \x1b[36m${mod}+P\x1b[0m  Quick switch   \x1b[36m${mod}+Shift+P\x1b[0m  Commands`,
@@ -1211,7 +1211,7 @@ export class TerminalManager {
         manualCheckForUpdates();
         return;
       case "about":
-        showToast(`Clawterm v${__APP_VERSION__}`, "info");
+        showToast(`ClawTerm v${__APP_VERSION__}`, "info");
         return;
       case "editCopy":
       case "editCut":

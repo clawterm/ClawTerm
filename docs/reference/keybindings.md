@@ -1,6 +1,6 @@
 # Keybindings
 
-Every keybinding shipped with Clawterm, grouped by category. The **Mod** column shows the primary modifier for your platform: `Cmd` on macOS, `Ctrl` on Windows and Linux.
+Every keybinding shipped with ClawTerm, grouped by category. The **Mod** column shows the primary modifier for your platform: `Cmd` on macOS, `Ctrl` on Windows and Linux.
 
 All bindings marked **configurable** can be remapped in `config.json` under the `keybindings` block — see [configuration.md](./configuration.md#keybindings). Hardcoded bindings cannot be changed.
 

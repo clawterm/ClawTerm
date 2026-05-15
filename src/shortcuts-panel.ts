@@ -140,7 +140,7 @@ export function createSettingsPanel(opts: PanelOptions): ShortcutsPanel {
 
   const aboutHeader = document.createElement("div");
   aboutHeader.className = "shortcuts-header";
-  aboutHeader.textContent = "Clawterm";
+  aboutHeader.textContent = "ClawTerm";
   panel.appendChild(aboutHeader);
 
   const tagline = document.createElement("div");

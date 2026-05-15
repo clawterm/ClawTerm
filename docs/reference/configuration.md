@@ -1,13 +1,13 @@
 # Configuration
 
-Clawterm reads its configuration from a single JSON file:
+ClawTerm reads its configuration from a single JSON file:
 
 | Platform | Path |
 | --- | --- |
 | macOS / Linux | `~/.config/clawterm/config.json` |
 | Windows | `%APPDATA%\clawterm\config.json` |
 
-The file is created with defaults the first time Clawterm launches. Reload it at runtime with **`Mod+Shift+R`** (or restart the app).
+The file is created with defaults the first time ClawTerm launches. Reload it at runtime with **`Mod+Shift+R`** (or restart the app).
 
 **Source of truth:** [`src/config-types.ts`](../../src/config-types.ts) (schema) and [`src/config.ts`](../../src/config.ts) (defaults and validation).
 
@@ -36,13 +36,13 @@ The file is created with defaults the first time Clawterm launches. Reload it at
 }
 ```
 
-Unknown fields are ignored. Invalid values are logged and replaced with the default for that field — Clawterm will not refuse to start because of a bad config.
+Unknown fields are ignored. Invalid values are logged and replaced with the default for that field — ClawTerm will not refuse to start because of a bad config.
 
 ## Shell
 
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
-| `shell` | `string` | `/bin/zsh` (macOS/Linux), `powershell.exe` (Windows) | Absolute path to the shell binary. If the path is missing or not executable, Clawterm falls back to the platform default and shows a toast. |
+| `shell` | `string` | `/bin/zsh` (macOS/Linux), `powershell.exe` (Windows) | Absolute path to the shell binary. If the path is missing or not executable, ClawTerm falls back to the platform default and shows a toast. |
 | `shellArgs` | `string[]` | `["--login"]` (POSIX), `["-NoLogo"]` (PowerShell), `[]` (cmd), `["-l"]` (nu/nushell) | Arguments passed to the shell on launch. Auto-derived from the shell name if you set `shell` but omit `shellArgs`. |
 
 ## Font
@@ -205,7 +205,7 @@ Notifications are suppressed for the currently focused tab when the app window i
 | `"/abs/path"` or `"~/path"` | `<expanded>/<repo-name>/` | **Absolute.** A central worktree cache shared across repos. Tilde expands to `$HOME`; only `~` and `~/foo` forms are supported (POSIX `~user` shorthand is not — those fall through to legacy mode). |
 | `"foo"` or `".foo"` | `<repo-root>/foo/` | **Legacy in-repo.** Preserved for users with a reason to opt back in (shared `node_modules`, IDE workspace scope). **Not recommended** — it's the layout that broke parent-repo tooling in #415. |
 
-Existing worktrees from previous installs continue to work — the resolver only runs at *creation* time, and existing worktree paths are stored as absolute paths in the session file. The first time you launch with the new default and have legacy in-repo worktrees, Clawterm shows a one-time toast pointing this out.
+Existing worktrees from previous installs continue to work — the resolver only runs at *creation* time, and existing worktree paths are stored as absolute paths in the session file. The first time you launch with the new default and have legacy in-repo worktrees, ClawTerm shows a one-time toast pointing this out.
 
 ## advanced
 
@@ -221,7 +221,7 @@ Internal timing knobs. Don't touch these unless you know why you're touching the
 
 ## configVersion and migrations
 
-`configVersion` is an integer that lets Clawterm migrate older configs forward when the schema changes. Don't edit it by hand — Clawterm writes the current version on save and runs migrations automatically on load.
+`configVersion` is an integer that lets ClawTerm migrate older configs forward when the schema changes. Don't edit it by hand — ClawTerm writes the current version on save and runs migrations automatically on load.
 
 Current version: **2**.
 

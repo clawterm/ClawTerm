@@ -2,7 +2,7 @@
 layout: home
 
 hero:
-  name: Clawterm
+  name: ClawTerm
   text: A terminal for managing AI coding agents
   tagline: Vertical tabs with live status, split panes, per-pane context tracking, desktop notifications, and auto-updates.
   actions:

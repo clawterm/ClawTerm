@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Default capability for all Clawterm windows (main + secondary)",
+  "description": "Default capability for all ClawTerm windows (main + secondary)",
   "windows": ["main", "window-*"],
   "permissions": [
     "core:default",

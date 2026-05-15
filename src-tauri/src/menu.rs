@@ -80,8 +80,8 @@ fn rebuild<R: Runtime>(app: &AppHandle<R>, ctx: &MenuContext) -> tauri::Result<(
 }
 
 fn build_menu<R: Runtime>(app: &AppHandle<R>, ctx: &MenuContext) -> tauri::Result<Menu<R>> {
-    let app_submenu = SubmenuBuilder::new(app, "Clawterm")
-        .item(&item(app, "about", "About Clawterm", ctx)?)
+    let app_submenu = SubmenuBuilder::new(app, "ClawTerm")
+        .item(&item(app, "about", "About ClawTerm", ctx)?)
         .item(&item(app, "checkForUpdates", "Check for Updates…", ctx)?)
         .separator()
         .item(&item(app, "toggleSettings", "Settings…", ctx)?)
@@ -163,7 +163,7 @@ fn build_menu<R: Runtime>(app: &AppHandle<R>, ctx: &MenuContext) -> tauri::Resul
         .build()?;
 
     let help_submenu = SubmenuBuilder::new(app, "Help")
-        .item(&item(app, "openDocs", "Clawterm Documentation", ctx)?)
+        .item(&item(app, "openDocs", "ClawTerm Documentation", ctx)?)
         .item(&item(app, "reportIssue", "Report an Issue", ctx)?)
         .item(&item(app, "showShortcuts", "Show Keyboard Shortcuts", ctx)?)
         .build()?;

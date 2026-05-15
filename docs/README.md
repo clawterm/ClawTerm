@@ -1,19 +1,19 @@
-# Clawterm documentation
+# ClawTerm documentation
 
-Documentation for Clawterm — a terminal for running many AI agents at once and keeping track of them.
+Documentation for ClawTerm — a terminal for running many AI agents at once and keeping track of them.
 
 > **Scope:** this is the in-repo reference for humans reading on GitHub or in an editor, and for AI agents assisting with the codebase. It is not a marketing site. For the project overview and screenshots, see the top-level [`README.md`](../README.md).
 
-## What Clawterm is
+## What ClawTerm is
 
-Clawterm is a Tauri + xterm.js desktop terminal that treats AI coding agents as first-class citizens. Vertical tabs show live agent status (idle / running / waiting / errored) so you can fan out many Claude Code or similar sessions and glance at them without clicking through each one. It adds split panes, git worktrees, desktop notifications, a command palette, and auto-updates on top of a plain terminal emulator.
+ClawTerm is a Tauri + xterm.js desktop terminal that treats AI coding agents as first-class citizens. Vertical tabs show live agent status (idle / running / waiting / errored) so you can fan out many Claude Code or similar sessions and glance at them without clicking through each one. It adds split panes, git worktrees, desktop notifications, a command palette, and auto-updates on top of a plain terminal emulator.
 
 ## How to read these docs
 
 Pick the section that matches what you're doing:
 
 ### Getting started
-Start here if you've never run Clawterm before, or you need to update or reinstall.
+Start here if you've never run ClawTerm before, or you need to update or reinstall.
 
 - **[Installation and updates](./getting-started/installation.md)** — install on macOS, verify checksums, control auto-updates, uninstall cleanly
 
@@ -71,39 +71,39 @@ If you're an AI assistant reading this tree:
 
 Short answers to the most common issues. If none of these match, file an issue with steps to reproduce: <https://github.com/clawterm/clawterm/issues>.
 
-### macOS: "Clawterm can't be opened because Apple cannot check it for malicious software"
+### macOS: "ClawTerm can't be opened because Apple cannot check it for malicious software"
 
-Clawterm isn't notarized yet. Clear the quarantine flag once:
+ClawTerm isn't notarized yet. Clear the quarantine flag once:
 
 ```bash
-xattr -cr /Applications/Clawterm.app
+xattr -cr /Applications/ClawTerm.app
 ```
 
 Tracking: [#378](https://github.com/clawterm/clawterm/issues/378).
 
 ### My config changes aren't taking effect
 
-Either reload the config with **`Mod+Shift+R`** or restart Clawterm. If a field was rejected as invalid, check the developer console — Clawterm logs every rejected field and the reason, then falls back to the default for that field (the rest of your config is still applied).
+Either reload the config with **`Mod+Shift+R`** or restart ClawTerm. If a field was rejected as invalid, check the developer console — ClawTerm logs every rejected field and the reason, then falls back to the default for that field (the rest of your config is still applied).
 
 ### A keybinding isn't firing
 
 Possible causes:
 
-1. The binding uses a format Clawterm doesn't recognize — check the rules in [keybindings.md → Binding format](./reference/keybindings.md#binding-format). Invalid bindings are reset to the default on load.
+1. The binding uses a format ClawTerm doesn't recognize — check the rules in [keybindings.md → Binding format](./reference/keybindings.md#binding-format). Invalid bindings are reset to the default on load.
 2. Two bindings collide. Project-switching shortcuts (`nextProject` / `prevProject`) are checked **before** tab-switching shortcuts, so sharing a binding between them means the project action wins.
-3. The binding is handled by the OS or the shell instead of Clawterm. Try a different combo.
+3. The binding is handled by the OS or the shell instead of ClawTerm. Try a different combo.
 4. The binding is one of the hardcoded ones (`Cmd+,`, `Mod+Arrow`, `Mod+Shift+Arrow`, `Mod+1–9`, `Mod+Alt+1–9`) — these can't be remapped.
 
 ### The shell I set in `config.json` is being ignored
 
-Clawterm validates the shell path at startup. If the path doesn't exist or isn't executable, it logs a warning, shows a toast, and falls back to `/bin/zsh`. Check that the path is absolute and the binary is executable.
+ClawTerm validates the shell path at startup. If the path doesn't exist or isn't executable, it logs a warning, shows a toast, and falls back to `/bin/zsh`. Check that the path is absolute and the binary is executable.
 
 ### Agent status isn't updating / I'm not getting notifications
 
 - Make sure `outputAnalysis.enabled` is `true` in `config.json` — the tab state detector depends on it.
 - Make sure `notifications.enabled` is `true` and the specific notification type (`notifications.types.agentWaiting.enabled`, etc.) is on.
 - Notifications are **intentionally suppressed** for the currently focused tab when the app window is visible. Background the tab (or the app) to see them.
-- On first launch Clawterm asks for notification permission. If you denied it, re-grant it in your OS notification settings.
+- On first launch ClawTerm asks for notification permission. If you denied it, re-grant it in your OS notification settings.
 
 ### Auto-update isn't finding a new version
 
@@ -111,9 +111,9 @@ Clawterm validates the shell path at startup. If the path doesn't exist or isn't
 - Trigger a manual check from the settings page.
 - If the update dialog never appears even when a newer version exists, look in `~/Library/Logs/clawterm/`.
 
-### I broke my config and Clawterm won't start properly
+### I broke my config and ClawTerm won't start properly
 
-Clawterm is designed to **never refuse to start** because of a bad config — it logs rejected fields and falls back to defaults for those fields only. If you want to start fresh, delete the config file and relaunch:
+ClawTerm is designed to **never refuse to start** because of a bad config — it logs rejected fields and falls back to defaults for those fields only. If you want to start fresh, delete the config file and relaunch:
 
 ```bash
 rm ~/.config/clawterm/config.json

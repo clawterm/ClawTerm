@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Clawterm",
+  "productName": "ClawTerm",
   "version": "1.5.0",
   "identifier": "com.clawterm.terminal",
   "build": {
@@ -22,7 +22,7 @@
     ],
     "category": "DeveloperTool",
     "shortDescription": "A terminal emulator built for AI agents",
-    "longDescription": "Clawterm is a fast, lightweight terminal emulator designed for running AI coding agents like Claude Code. Features vertical tab sidebar, process intelligence, and native performance.",
+    "longDescription": "ClawTerm is a fast, lightweight terminal emulator designed for running AI coding agents like Claude Code. Features vertical tab sidebar, process intelligence, and native performance.",
     "macOS": {
       "minimumSystemVersion": "11.0",
       "entitlements": "Entitlements.plist",
@@ -42,7 +42,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Clawterm",
+        "title": "ClawTerm",
         "width": 1100,
         "height": 700,
         "minWidth": 600,

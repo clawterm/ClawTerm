@@ -128,7 +128,7 @@ fn claude_status_path_if_fresh(pid: u32) -> Option<std::path::PathBuf> {
 
 /// Remove any `<pid>.json` files in `CLAUDE_STATUS_DIR` whose PID is no
 /// longer alive. Called once at startup from `setup_claude_statusline`
-/// — keeps the directory bounded across Clawterm sessions without
+/// — keeps the directory bounded across ClawTerm sessions without
 /// relying on each Claude Code instance to clean up after itself.
 pub fn sweep_stale_claude_status_files() {
     let dir = std::path::Path::new(CLAUDE_STATUS_DIR);

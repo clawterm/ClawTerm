@@ -1,4 +1,4 @@
-# Clawterm
+# ClawTerm
 
 [![CI](https://github.com/clawterm/clawterm/actions/workflows/ci.yml/badge.svg)](https://github.com/clawterm/clawterm/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/clawterm/clawterm)](https://github.com/clawterm/clawterm/releases/latest)
@@ -6,7 +6,7 @@
 
 A terminal for running many AI agents at once and keeping track of them.
 
-![Clawterm](docs/screenshots/clawterm.png)
+![ClawTerm](docs/screenshots/clawterm.png)
 
 Vertical tabs with live agent status, split panes, per-pane context tracking, desktop notifications, and auto-updates. Built with [Tauri 2](https://v2.tauri.app/) + [xterm.js](https://xtermjs.org/).
 
@@ -14,7 +14,7 @@ Vertical tabs with live agent status, split panes, per-pane context tracking, de
 
 ## Install
 
-Clawterm is **macOS only** (Apple Silicon and Intel).
+ClawTerm is **macOS only** (Apple Silicon and Intel).
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/clawterm/clawterm/main/install.sh | bash
@@ -22,7 +22,7 @@ curl -fsSL https://raw.githubusercontent.com/clawterm/clawterm/main/install.sh |
 
 Or grab the universal DMG manually from the [latest release](https://github.com/clawterm/clawterm/releases/latest). Updates are automatic.
 
-> **macOS note:** You may need `xattr -cr /Applications/Clawterm.app` to clear the quarantine flag until Apple notarization is set up.
+> **macOS note:** You may need `xattr -cr /Applications/ClawTerm.app` to clear the quarantine flag until Apple notarization is set up.
 
 ## Highlights
 
@@ -37,7 +37,7 @@ Or grab the universal DMG manually from the [latest release](https://github.com/
 
 ## Where worktrees live
 
-By default, Clawterm creates new git worktrees in a sibling directory next to your repo, namespaced by repo name:
+By default, ClawTerm creates new git worktrees in a sibling directory next to your repo, namespaced by repo name:
 
 ```
 ~/Code/

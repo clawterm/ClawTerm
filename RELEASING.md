@@ -1,6 +1,6 @@
-# Releasing Clawterm
+# Releasing ClawTerm
 
-This document covers how to ship a new version of Clawterm — from writing changelog entries to watching the build succeed.
+This document covers how to ship a new version of ClawTerm — from writing changelog entries to watching the build succeed.
 
 ## Quick start
 
@@ -100,7 +100,7 @@ The `publish` job then flips the draft to final once every platform succeeds.
 
 ## How updates reach users
 
-1. Running Clawterm instances poll `latest.json` from GitHub Releases (default: every 1 hour)
+1. Running ClawTerm instances poll `latest.json` from GitHub Releases (default: every 1 hour)
 2. The Tauri updater plugin compares the manifest version to the current app version
 3. If a newer version exists, an update notice appears in the sidebar footer
 4. User clicks "Update" → confirmation dialog → "Update & Restart"

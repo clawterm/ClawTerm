@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Clawterm installer (macOS, Apple Silicon and Intel)
+# ClawTerm installer (macOS, Apple Silicon and Intel)
 # Usage:
 #   Install:    curl -fsSL https://raw.githubusercontent.com/clawterm/clawterm/main/install.sh | bash
 #   Uninstall:  curl -fsSL https://raw.githubusercontent.com/clawterm/clawterm/main/install.sh | bash -s -- --uninstall
 
 REPO="clawterm/clawterm"
-APP_NAME="Clawterm"
+APP_NAME="ClawTerm"
 
 info() { printf "\033[1;34m==>\033[0m %s\n" "$1"; }
 warn() { printf "\033[1;33m==>\033[0m %s\n" "$1"; }
@@ -15,7 +15,7 @@ error() { printf "\033[1;31merror:\033[0m %s\n" "$1" >&2; exit 1; }
 
 # ── Uninstall mode ──
 if [ "${1:-}" = "--uninstall" ]; then
-  info "Uninstalling Clawterm..."
+  info "Uninstalling ClawTerm..."
   if [ -d "/Applications/${APP_NAME}.app" ]; then
     rm -rf "/Applications/${APP_NAME}.app"
     info "Removed /Applications/${APP_NAME}.app"
@@ -33,7 +33,7 @@ if [ "${1:-}" = "--uninstall" ]; then
       info "Config preserved at $CONFIG_DIR"
     fi
   fi
-  info "Clawterm has been uninstalled."
+  info "ClawTerm has been uninstalled."
   exit 0
 fi
 
@@ -57,12 +57,12 @@ if [ -d "/Applications/${APP_NAME}.app" ]; then
   INSTALLED=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "/Applications/${APP_NAME}.app/Contents/Info.plist" 2>/dev/null || echo "unknown")
   LATEST="${TAG#v}"
   if [ "$INSTALLED" = "$LATEST" ]; then
-    info "Clawterm ${INSTALLED} is already installed and up to date."
+    info "ClawTerm ${INSTALLED} is already installed and up to date."
     exit 0
   fi
-  info "Updating Clawterm ${INSTALLED} → ${LATEST}..."
+  info "Updating ClawTerm ${INSTALLED} → ${LATEST}..."
 else
-  info "Installing Clawterm ${TAG#v}..."
+  info "Installing ClawTerm ${TAG#v}..."
 fi
 
 # The macOS bundle is a single universal DMG (ARM + Intel).
@@ -109,5 +109,5 @@ hdiutil detach "$MOUNT_DIR" -quiet
 # Clear quarantine so macOS doesn't block the unsigned app
 xattr -cr "/Applications/${APP_NAME}.app" 2>/dev/null || true
 
-info "Done! Clawterm ${TAG#v} is ready."
+info "Done! ClawTerm ${TAG#v} is ready."
 info "Open it from /Applications or run: open /Applications/${APP_NAME}.app"

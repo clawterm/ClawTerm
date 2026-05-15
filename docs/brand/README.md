@@ -1,6 +1,6 @@
-# Clawterm brand assets
+# ClawTerm brand assets
 
-Source files for the Clawterm wordmark / icon. Every committed PNG, `.icns`, and OG image in the repo derives from these — never edit the bitmaps by hand.
+Source files for the ClawTerm wordmark / icon. Every committed PNG, `.icns`, and OG image in the repo derives from these — never edit the bitmaps by hand.
 
 ## Files
 
@@ -24,7 +24,7 @@ sips -s format png -z 512 512 docs/brand/clawterm.svg --out src-tauri/icons/icon
 macOS `.icns` (multi-resolution bundle):
 
 ```bash
-ICONSET="/tmp/Clawterm.iconset"
+ICONSET="/tmp/ClawTerm.iconset"
 rm -rf "$ICONSET" && mkdir -p "$ICONSET"
 sips -s format png -z 16 16     docs/brand/clawterm.svg --out "$ICONSET/icon_16x16.png"
 sips -s format png -z 32 32     docs/brand/clawterm.svg --out "$ICONSET/icon_16x16@2x.png"
@@ -56,7 +56,7 @@ Then upload `docs/brand/og-image.png` to **repo Settings → General → Social 
 
 ## Screenshots — needs human action
 
-The README hero (`docs/screenshots/clawterm.png`) and any supporting shots are *not* generated — they're captured from a running Clawterm install. Per `docs/brand.md`:
+The README hero (`docs/screenshots/clawterm.png`) and any supporting shots are *not* generated — they're captured from a running ClawTerm install. Per `docs/brand.md`:
 
 - Same window dimensions as the existing image (~1280×800, native macOS chrome cropped).
 - Same demo content: a project with three tabs in mixed states (running / waiting / errored), one tab expanded showing a split.

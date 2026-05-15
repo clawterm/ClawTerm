@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for your interest in Clawterm! This project is open source under the MIT License — anyone can fork, modify, and use it. Contributions to this repository go through PR review by the maintainer.
+Thanks for your interest in ClawTerm! This project is open source under the MIT License — anyone can fork, modify, and use it. Contributions to this repository go through PR review by the maintainer.
 
 ## Setup
 
@@ -22,7 +22,7 @@ Requires [Rust](https://rustup.rs/) (stable) and [Node.js](https://nodejs.org/) 
 
 ## Reporting bugs
 
-Use the [bug report template](https://github.com/clawterm/clawterm/issues/new?template=bug_report.yml). Include your Clawterm version, OS, and steps to reproduce.
+Use the [bug report template](https://github.com/clawterm/clawterm/issues/new?template=bug_report.yml). Include your ClawTerm version, OS, and steps to reproduce.
 
 ## Suggesting features
 
