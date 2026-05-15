@@ -1127,7 +1127,14 @@ export class TerminalManager {
   private async setupNativeMenu() {
     try {
       const { listen } = await import("@tauri-apps/api/event");
-      this.unlistenMenu = await listen<string>("menu-action", (e) => this.dispatchMenuAction(e.payload));
+      this.unlistenMenu = await listen<string>("menu-action", (e) => {
+        // Belt-and-suspenders: the Rust side routes menu-action to the
+        // focused window only, but if that detection fails (e.g. menu
+        // bar steals focus during dispatch) the event can broadcast.
+        // Each window ignores the event unless it's the focused one. (#522)
+        if (!this.isWindowFocused) return;
+        this.dispatchMenuAction(e.payload);
+      });
       this.applyMenuAccelerators();
       this.updateMenuDisabled();
     } catch (err) {
