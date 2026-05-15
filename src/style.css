@@ -1324,9 +1324,13 @@ body {
   background: var(--scrollbar-thumb-hover);
 }
 
-/* Focused pane indicator — slightly lighter surface */
+/* Focused pane indicator — slightly lighter surface plus a dark-green
+   border tint so the active terminal is immediately identifiable.
+   Focused pane is a primary chrome element per docs/brand.md, so green
+   is the correct accent here. */
 .pane-focused {
   background: var(--bg-elevated);
+  border-color: var(--accent-border);
 }
 
 /* Split containers — class is built as `split-container split-${direction}`

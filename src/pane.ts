@@ -199,6 +199,7 @@ export class Pane {
     this.terminal = new Terminal({
       cursorBlink: config.cursor.blink,
       cursorStyle: config.cursor.style,
+      cursorInactiveStyle: "none",
       fontSize: config.font.size,
       fontFamily: config.font.family,
       lineHeight: config.font.lineHeight,
