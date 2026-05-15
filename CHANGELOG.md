@@ -6,8 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [1.6.1] - 2026-05-15
+
 ### Removed
 - **Plausible analytics** — purged from both the in-app shell and the landing page. The deferred script-injection in `src/main.ts`, the `<script>` block in `docs/index.html`, and the `https://plausible.io` allowances in the Tauri CSP are all gone. ClawTerm no longer makes any third-party analytics requests.
+
 
 ## [1.6.0] - 2026-05-15
 
@@ -1237,7 +1240,8 @@ This release establishes Clawterm's visual identity, transforming the app from a
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v1.6.0...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v1.6.1...HEAD
+[1.6.1]: https://github.com/clawterm/clawterm/compare/v1.6.0...v1.6.1
 [1.6.0]: https://github.com/clawterm/clawterm/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/clawterm/clawterm/compare/v1.4.3...v1.5.0
 [1.4.3]: https://github.com/clawterm/clawterm/compare/v1.4.2...v1.4.3
