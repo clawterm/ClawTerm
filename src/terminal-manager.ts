@@ -1656,7 +1656,11 @@ export class TerminalManager {
       } else {
         // Last tab closes the window (Warp/iTerm/Wezterm convention).
         // For the main window this quits the app, same as Cmd+Q. (#522)
-        void getCurrentWindow().close();
+        this.renderTabList();
+        this.persistSession();
+        const w = getCurrentWindow();
+        logger.debug(`[closeTab] closing window label=${w.label}`);
+        w.close().catch((err) => logger.warn("window.close() failed:", err));
         return;
       }
     }
