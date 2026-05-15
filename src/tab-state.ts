@@ -327,16 +327,19 @@ export function formatElapsed(startMs: number): string {
   return `${days}d ${hrs % 24}h`;
 }
 
-/** Deterministic branch color from a fixed warm palette */
+/** Deterministic branch color, drawn from the same brand-tuned bright
+ *  ANSI hues the terminal renders (#525, #527). Reusing the terminal
+ *  palette keeps branch labels and terminal text in the same visual
+ *  family — calmer than the previous saturated iOS palette. */
 const BRANCH_COLORS = [
-  "#ff6b6b",
-  "#30d158",
-  "#ff9f0a",
-  "#ff453a",
-  "#bf5af2",
-  "#e0a4ff",
-  "#ff375f",
-  "#ffd60a",
+  "#F07178",
+  "#3DD68C",
+  "#FFD666",
+  "#82AAFF",
+  "#D4A0FF",
+  "#7DD3FC",
+  "#A8C0FF",
+  "#FF8A8E",
 ];
 const BRANCH_COLOR_CACHE_MAX = 256;
 const branchColorCache = new Map<string, string>();
