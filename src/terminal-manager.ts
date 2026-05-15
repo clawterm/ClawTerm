@@ -1656,11 +1656,15 @@ export class TerminalManager {
       } else {
         // Last tab closes the window (Warp/iTerm/Wezterm convention).
         // For the main window this quits the app, same as Cmd+Q. (#522)
+        // Use destroy() instead of close() — the onCloseRequested hook
+        // would re-enter dispose() while we're already mid-cleanup,
+        // leaving the window frozen but alive. We've already torn down
+        // the last tab; just kill the window directly.
         this.renderTabList();
         this.persistSession();
         const w = getCurrentWindow();
-        logger.debug(`[closeTab] closing window label=${w.label}`);
-        w.close().catch((err) => logger.warn("window.close() failed:", err));
+        logger.debug(`[closeTab] destroying window label=${w.label}`);
+        w.destroy().catch((err) => logger.warn("window.destroy() failed:", err));
         return;
       }
     }
