@@ -1646,14 +1646,10 @@ export class TerminalManager {
           const tab = this.tabs.get(targetId);
           if (tab) tab.show();
         }
-      } else if (this.isSecondaryWindow) {
-        // Secondary windows close when their last tab closes (#522).
-        // Main window stays open with a fresh tab — Cmd+Q is the proper quit.
-        void getCurrentWindow().close();
-        return;
       } else {
-        // Last project, last tab — create a fresh tab
-        this.createTab();
+        // Last tab closes the window (Warp/iTerm/Wezterm convention).
+        // For the main window this quits the app, same as Cmd+Q. (#522)
+        void getCurrentWindow().close();
         return;
       }
     }
