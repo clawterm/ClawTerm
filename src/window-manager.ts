@@ -1,16 +1,20 @@
-import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { getAllWebviewWindows } from "@tauri-apps/api/webviewWindow";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { WebviewWindow, getAllWebviewWindows } from "@tauri-apps/api/webviewWindow";
 
-let counter = 0;
+export const MAIN_WINDOW_LABEL = "main";
+
+export function isMainWindow(): boolean {
+  return getCurrentWindow().label === MAIN_WINDOW_LABEL;
+}
 
 async function nextLabel(): Promise<string> {
   const existing = await getAllWebviewWindows();
-  const used = new Set(existing.map((w) => w.label));
-  while (true) {
-    counter += 1;
-    const label = `window-${counter}`;
-    if (!used.has(label)) return label;
+  let max = 0;
+  for (const w of existing) {
+    const m = w.label.match(/^window-(\d+)$/);
+    if (m) max = Math.max(max, parseInt(m[1], 10));
   }
+  return `window-${max + 1}`;
 }
 
 export async function openNewWindow(): Promise<void> {
@@ -26,7 +30,7 @@ export async function openNewWindow(): Promise<void> {
     transparent: true,
     shadow: true,
   });
-  w.once("tauri://error", (e) => {
+  void w.once("tauri://error", (e) => {
     console.error("failed to open new window", e);
   });
 }

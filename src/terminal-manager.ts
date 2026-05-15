@@ -36,7 +36,10 @@ import { showCommandPalette, type PaletteCommand } from "./command-palette";
 import { createKeyHandler, type KeybindingActions } from "./keybinding-handler";
 import { TabRenderer } from "./tab-renderer";
 import { perfMetrics } from "./perf";
-import { openNewWindow } from "./window-manager";
+import { isMainWindow, openNewWindow } from "./window-manager";
+
+const PLUS_ICON_SVG = `<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1.5V10.5M1.5 6H10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+const TITLEBAR_NO_DRAG_SELECTOR = "#traffic-lights, #new-window-btn";
 
 function el(tag: string, attrs?: Record<string, string>, ...children: (HTMLElement | string)[]): HTMLElement {
   const e = document.createElement(tag);
@@ -126,9 +129,7 @@ export class TerminalManager {
   private unlistenFocus: (() => void) | null = null;
   private lastTabSnapshot = "";
   private sessionTimer: ReturnType<typeof setTimeout> | null = null;
-  /** Secondary windows (label !== "main") don't load or persist session
-   *  state — only the main window owns session.json. Spawned via the
-   *  '+' button or Cmd+N, they're ephemeral by design for v1 (#522). */
+  /** Main window owns session.json; secondaries are ephemeral (#522). */
   private isSecondaryWindow = false;
   private shortcutsPanel: { element: HTMLDivElement; destroy(): void } | null = null;
   /** Read-only keyboard-shortcuts overlay (#514). Stores the dismiss thunk
@@ -308,10 +309,9 @@ export class TerminalManager {
       showTabContextMenu: (e, id) => this.showTabContextMenu(e, id),
     });
 
-    this.isSecondaryWindow = getCurrentWindow().label !== "main";
+    this.isSecondaryWindow = !isMainWindow();
 
-    // Start session load in parallel with synchronous DOM setup. Secondary
-    // windows skip session entirely and boot to a fresh project (#522).
+    // Start session load in parallel with synchronous DOM setup.
     const sessionPromise = this.isSecondaryWindow ? Promise.resolve(null) : loadSession();
 
     this.renderShell();
@@ -549,28 +549,25 @@ export class TerminalManager {
     document.getElementById("btn-minimize")!.addEventListener("click", () => win.minimize());
     document.getElementById("btn-maximize")!.addEventListener("click", () => win.toggleMaximize());
 
-    // Explicit drag handling for custom titlebar
     const titlebar = document.getElementById("titlebar")!;
+    const isTitlebarControl = (e: Event) => !!(e.target as HTMLElement).closest(TITLEBAR_NO_DRAG_SELECTOR);
     titlebar.addEventListener("mousedown", (e) => {
-      // Only drag from the titlebar itself, not control buttons
-      const t = e.target as HTMLElement;
-      if (t.closest("#traffic-lights") || t.closest("#new-window-btn")) return;
+      if (isTitlebarControl(e)) return;
       win.startDragging();
     });
     titlebar.addEventListener("dblclick", (e) => {
-      const t = e.target as HTMLElement;
-      if (t.closest("#traffic-lights") || t.closest("#new-window-btn")) return;
+      if (isTitlebarControl(e)) return;
       win.toggleMaximize();
     });
 
     const newTabBtn = document.getElementById("new-tab-btn")!;
-    newTabBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1.5V10.5M1.5 6H10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+    newTabBtn.innerHTML = PLUS_ICON_SVG;
     newTabBtn.addEventListener("click", () => {
       this.createTab();
     });
 
     const newWindowBtn = document.getElementById("new-window-btn")!;
-    newWindowBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1.5V10.5M1.5 6H10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+    newWindowBtn.innerHTML = PLUS_ICON_SVG;
     newWindowBtn.addEventListener("click", () => {
       void openNewWindow();
     });

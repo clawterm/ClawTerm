@@ -5,21 +5,21 @@ import { TerminalManager } from "./terminal-manager";
 import { startUpdateChecker } from "./updater";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
+import { isMainWindow } from "./window-manager";
 
-const isMainWindow = getCurrentWindow().label === "main";
+const main = isMainWindow();
 
-// Clean up stale PTY sessions from previous hot reloads (dev mode). Only
-// the main window may do this — clear_sessions kills every PTY in the
-// process, which would nuke a secondary window's PTYs if run there. (#522)
-if (isMainWindow) {
+// clear_sessions kills every PTY in the process, so only the main window
+// may run it on startup — otherwise a secondary window would nuke the
+// main window's PTYs. Updater and analytics are process-level singletons
+// for the same reason. (#522)
+if (main) {
   invoke("plugin:pty|clear_sessions").catch((e) => console.debug("clear_sessions:", e));
 }
 
 const manager = new TerminalManager();
 manager.init().then(() => {
-  // Updater and analytics are process-level singletons; run only in the
-  // main window so opening a second window doesn't double-fire either.
-  if (isMainWindow) {
+  if (main) {
     startUpdateChecker(manager.config);
 
     if (navigator.onLine) {
