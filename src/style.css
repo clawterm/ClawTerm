@@ -1,27 +1,36 @@
 :root {
-  /* ── Clawterm Brand Palette ──────────────────────────────────────────── */
+  /* ── ClawTerm Brand Palette ──────────────────────────────────────────── */
 
-  /* Surfaces — clear hierarchy: base < surface < elevated */
-  --bg-base: #0c0c0e;
-  --bg-surface: #131316;
-  --bg-elevated: #1a1a1e;
-  --bg-modal: rgba(19, 19, 22, 0.97);
+  /* Surfaces — clear hierarchy: base < surface < elevated.
+     New dark scale per docs/brand.md — meaningfully darker than the
+     previous palette so the green active signal reads cleanly. */
+  --bg-base: #050607;
+  --bg-surface: #0b0d0e;
+  --bg-elevated: #111315;
+  --bg-modal: rgba(11, 13, 14, 0.97);
   --bg-hover: rgba(255, 255, 255, 0.06);
   --bg-active: rgba(255, 255, 255, 0.1);
 
-  /* Text — 3 semantic levels */
-  --text-primary: rgba(240, 240, 244, 0.9);
-  --text-secondary: rgba(240, 240, 244, 0.55);
-  --text-tertiary: rgba(240, 240, 244, 0.35);
+  /* Text — primary + muted are the documented brand tokens
+     (#F4F4F5 / #9CA3AF). The rgba scale below is kept for legacy
+     call sites that need translucent text over arbitrary surfaces. */
+  --text: #f4f4f5;
+  --text-muted: #9ca3af;
+  --text-primary: rgba(244, 244, 245, 0.9);
+  --text-secondary: rgba(244, 244, 245, 0.55);
+  --text-tertiary: rgba(244, 244, 245, 0.35);
 
-  /* Accent — neutral light for a clean dark UI */
-  --accent: rgba(240, 240, 244, 0.8);
-  --accent-hover: rgba(240, 240, 244, 0.9);
-  --accent-muted: rgba(240, 240, 244, 0.08);
-  --accent-border: rgba(240, 240, 244, 0.2);
-  --accent-on: #0c0c0e;
+  /* Accent — stays near-white in this PR. #527 audits decoration call
+     sites and then flips --accent to Command Green #7CFF4F in one PR
+     so main is never left half-broken. */
+  --accent: rgba(244, 244, 245, 0.8);
+  --accent-hover: rgba(244, 244, 245, 0.9);
+  --accent-muted: rgba(244, 244, 245, 0.08);
+  --accent-border: rgba(244, 244, 245, 0.2);
+  --accent-on: #050607;
 
   /* Borders */
+  --border: #2a2e31;
   --border-subtle: rgba(255, 255, 255, 0.08);
   --border-default: rgba(255, 255, 255, 0.12);
   --border-width: 1px;
