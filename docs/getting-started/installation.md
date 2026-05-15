@@ -10,7 +10,7 @@ One-liner installer (downloads the latest DMG, verifies the SHA-256 checksum aga
 curl -fsSL https://raw.githubusercontent.com/clawterm/clawterm/main/install.sh | bash
 ```
 
-If you'd rather install by hand, download `Clawterm_<version>_universal.dmg` from the [latest release](https://github.com/clawterm/clawterm/releases/latest) — a single universal build that runs on both Apple Silicon and Intel Macs.
+If you'd rather install by hand, download `ClawTerm_<version>_universal.dmg` from the [latest release](https://github.com/clawterm/clawterm/releases/latest) — a single universal build that runs on both Apple Silicon and Intel Macs.
 
 Mount the DMG and drag `ClawTerm.app` into `/Applications`.
 
@@ -28,7 +28,7 @@ Mount the DMG and drag `ClawTerm.app` into `/Applications`.
 irm https://raw.githubusercontent.com/clawterm/clawterm/main/install.ps1 | iex
 ```
 
-The script downloads the latest `Clawterm_<version>_x64-setup.exe`, verifies the SHA-256 checksum, and runs the installer.
+The script downloads the latest `ClawTerm_<version>_x64-setup.exe`, verifies the SHA-256 checksum, and runs the installer.
 
 You can also download the installer manually from the [latest release](https://github.com/clawterm/clawterm/releases/latest).
 
@@ -38,8 +38,8 @@ You can also download the installer manually from the [latest release](https://g
 
 Download either package from the [latest release](https://github.com/clawterm/clawterm/releases/latest):
 
-- Debian/Ubuntu → `Clawterm_<version>_amd64.deb` — install with `sudo apt install ./Clawterm_<version>_amd64.deb`
-- Other distros → `Clawterm_<version>_amd64.AppImage` — `chmod +x` and run directly
+- Debian/Ubuntu → `ClawTerm_<version>_amd64.deb` — install with `sudo apt install ./ClawTerm_<version>_amd64.deb`
+- Other distros → `ClawTerm_<version>_amd64.AppImage` — `chmod +x` and run directly
 
 ### Building from source
 
@@ -75,7 +75,7 @@ shasum -a 256 -c checksums-universal-apple-darwin.txt --ignore-missing
 **Windows (PowerShell):**
 
 ```powershell
-Get-FileHash -Algorithm SHA256 .\Clawterm_1.2.0_x64-setup.exe
+Get-FileHash -Algorithm SHA256 .\ClawTerm_1.2.0_x64-setup.exe
 # Compare the hash against the matching line in checksums-x86_64-pc-windows-msvc.txt
 ```
 

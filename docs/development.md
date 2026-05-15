@@ -180,10 +180,10 @@ Per-platform release bundles:
 
 | Platform | Path |
 | --- | --- |
-| macOS | `src-tauri/target/release/bundle/dmg/Clawterm_<version>_*.dmg` |
-| Windows | `src-tauri/target/release/bundle/nsis/Clawterm_<version>_x64-setup.exe` |
+| macOS | `src-tauri/target/release/bundle/dmg/ClawTerm_<version>_*.dmg` |
+| Windows | `src-tauri/target/release/bundle/nsis/ClawTerm_<version>_x64-setup.exe` |
 | Linux (deb) | `src-tauri/target/release/bundle/deb/clawterm_<version>_amd64.deb` |
-| Linux (AppImage) | `src-tauri/target/release/bundle/appimage/Clawterm_<version>_amd64.AppImage` |
+| Linux (AppImage) | `src-tauri/target/release/bundle/appimage/ClawTerm_<version>_amd64.AppImage` |
 
 The Rust target dir is huge (~2 GB after a few builds). `cargo clean --manifest-path src-tauri/Cargo.toml` if you need the space.
 

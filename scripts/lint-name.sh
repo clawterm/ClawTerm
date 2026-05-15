@@ -15,15 +15,16 @@
 
 set -eu
 
-violations=$(grep -rwn "Clawterm" \
+violations=$(grep -rn "Clawterm" \
   --include="*.md" --include="*.ts" --include="*.tsx" \
   --include="*.json" --include="*.toml" --include="*.html" --include="*.css" \
-  --include="*.yml" --include="*.yaml" \
+  --include="*.yml" --include="*.yaml" --include="*.sh" \
   --exclude-dir=node_modules --exclude-dir=target --exclude-dir=dist \
   --exclude-dir=.git --exclude-dir=.clawterm-worktrees --exclude-dir=.claude \
   --exclude-dir=gen \
   . 2>/dev/null \
   | grep -Ev '^\./(docs/brand|CHANGELOG)\.md:' \
+  | grep -v '^\./scripts/lint-name\.sh:' \
   || true)
 
 if [ -n "$violations" ]; then

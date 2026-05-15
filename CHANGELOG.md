@@ -7,7 +7,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Changed
+- **Brand refresh — new mark, color system, and typography.** ClawTerm now ships with a 2×2 command-grid icon (active tile in Command Green `#7CFF4F`), a unified all-mono UI (JetBrains Mono everywhere from sidebar labels to wordmark — Inter is retired), and a calmer Mac-utility palette. Active state is the only thing rendered in green: focused tab, focused pane border, primary CTA, terminal cursor, focus ring, status indicators. Decoration uses neutral tokens. Borders are dimmed throughout and the terminal interior is now `#07080A`, one notch darker than the surrounding chrome, so the terminal reads as a deliberate well. Inactive terminal panes no longer render a cursor, reinforcing which pane is receiving input. App icon, favicons, web manifest, and the landing page (`docs/index.html`) are all regenerated against the new system. See `docs/brand.md` for the full guidelines (#523, #524, #525, #526, #527).
 - **Brand renamed Clawterm → ClawTerm** (capital T). Documentation, in-app strings, menus, window titles, and Tauri bundle metadata all use the new casing. The macOS bundle is now `ClawTerm.app` for fresh installs; the bundle identifier stays `com.clawterm.terminal` so the in-app updater rewrites your existing `Clawterm.app` in place and all user data and config persist across the rename. If you'd like a consistent filename you can quit ClawTerm, drag the old bundle to the Trash, and reinstall — but you don't have to (#524).
+
+### Fixed
+- **Docs referenced stale `Clawterm_<version>_*` bundle filenames** in installation and development guides. Updated to match the new `ClawTerm_<version>_*` naming produced by fresh Tauri builds.
 
 ## [1.5.0] - 2026-05-15
 
