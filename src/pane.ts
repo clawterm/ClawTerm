@@ -20,6 +20,7 @@ import { showContextMenu } from "./context-menu";
 import { FileLinkProvider } from "./file-link-provider";
 import { copyToClipboard, isPrimaryMod } from "./utils";
 import { showPasteConfirm as showPasteDialog } from "./paste-confirm";
+import { TRUSTED_AGENT_PROCESSES, isTrustedAgentForeground } from "./trust-gate";
 
 export type KeyHandler = (e: KeyboardEvent) => boolean;
 
@@ -29,11 +30,6 @@ interface IPtyWithInit extends IPty {
 }
 
 let paneCounter = 0;
-
-/** Foreground process names that are safe to paste multi-line text into
- *  without the confirm dialog — they're interactive AI agent prompts,
- *  not shells about to execute each line as a command (see #508). */
-const TRUSTED_AGENT_PROCESSES: ReadonlySet<string> = new Set(["claude"]);
 
 function pushSpan(parent: HTMLElement, cls: string, text: string, title?: string): HTMLSpanElement {
   const el = document.createElement("span");
@@ -946,8 +942,19 @@ export class Pane {
 
   /** Paste multi-line text, but skip the confirm dialog when the foreground
    *  process is a trusted AI agent CLI — pasting into Claude Code's prompt
-   *  isn't the same risk profile as pasting into a shell (#508). */
+   *  isn't the same risk profile as pasting into a shell (#508).
+   *
+   *  Before the pty has finished initializing there's nothing to protect
+   *  against (no shell, no prompt) so we skip the dialog too — otherwise
+   *  a paste fired right after pane creation surfaces the dialog with no
+   *  way for the trust gate to resolve, which has been observed in
+   *  practice. (#519 hypothesis C) */
   private async pasteWithAgentTrust(text: string): Promise<void> {
+    if (this.ptyHandle == null || this.ptyPid == null) {
+      if (this.disposed) return;
+      this.terminal.paste(text);
+      return;
+    }
     if (await this.foregroundIsTrustedAgent()) {
       if (this.disposed) return;
       this.terminal.paste(text);
@@ -959,7 +966,14 @@ export class Pane {
 
   /** Resolve the pane's foreground process name and check it against the
    *  trusted-agent allowlist. Returns false on any failure so we fall back
-   *  to the safe (dialog) path. */
+   *  to the safe (dialog) path.
+   *
+   *  When the immediate foreground isn't trusted, walk up the ancestor
+   *  chain toward the shell. Claude Code spawns subshells (zsh / bash /
+   *  node) for tool calls, which briefly become the pane's foreground —
+   *  we still want to trust pastes during those windows because the
+   *  session driver is `claude`. The chain stops at `shellPid`, so we
+   *  never accidentally trust the shell itself. (#519) */
   private async foregroundIsTrustedAgent(): Promise<boolean> {
     const handle = this.ptyHandle;
     const shellPid = this.ptyPid;
@@ -970,7 +984,14 @@ export class Pane {
       // is the right safety net (multi-line paste can execute commands).
       if (fgPid === shellPid) return false;
       const name = await invoke<string>("get_process_name", { pid: fgPid });
-      return TRUSTED_AGENT_PROCESSES.has(name);
+      if (TRUSTED_AGENT_PROCESSES.has(name)) return true;
+      // Fast path missed: foreground is e.g. a tool subshell. Walk up to
+      // the pty's shell looking for a trusted ancestor.
+      const ancestors = await invoke<Array<{ pid: number; name: string }>>(
+        "get_process_ancestors",
+        { startPid: fgPid, stopPid: shellPid },
+      );
+      return isTrustedAgentForeground(name, ancestors);
     } catch (e) {
       logger.debug("foregroundIsTrustedAgent: lookup failed", e);
       return false;

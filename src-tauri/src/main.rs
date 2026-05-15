@@ -250,6 +250,7 @@ fn main() {
             clear_session,
             process_info::get_process_cwd_full,
             process_info::get_process_name,
+            process_info::get_process_ancestors,
             process_info::poll_pane_info,
             git_info::get_git_branch,
             git_info::get_git_status,

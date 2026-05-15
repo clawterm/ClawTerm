@@ -182,6 +182,42 @@ pub fn get_process_name(pid: u32) -> Result<String, String> {
     platform::proc_name(pid)
 }
 
+/// One node in the foreground-process ancestor chain.
+#[derive(Serialize)]
+pub struct ProcessNode {
+    pub pid: u32,
+    pub name: String,
+}
+
+/// Walk up the parent-PID chain from `start_pid`, stopping when we reach
+/// `stop_pid` (excluded), pid 0/1, or 8 hops — whichever comes first.
+/// Returns the chain as `[start, parent, grandparent, …]`.
+///
+/// Used by the paste-confirm trust gate: when the immediate foreground
+/// process is a shell or subprocess (e.g. Claude Code spawned a tool's
+/// subshell that briefly took foreground), we still want to recognize
+/// that a trusted agent is the actual session driver. The chain stops
+/// at `stop_pid` so we never mistakenly trust the shell itself or
+/// anything above it. (#519)
+#[tauri::command]
+pub fn get_process_ancestors(start_pid: u32, stop_pid: u32) -> Vec<ProcessNode> {
+    const MAX_HOPS: usize = 8;
+    let mut out = Vec::with_capacity(MAX_HOPS);
+    let mut pid = start_pid;
+    for _ in 0..MAX_HOPS {
+        if pid == 0 || pid == 1 || pid == stop_pid {
+            break;
+        }
+        let name = platform::proc_name(pid).unwrap_or_default();
+        out.push(ProcessNode { pid, name });
+        match platform::proc_ppid(pid) {
+            Some(ppid) if ppid != pid => pid = ppid,
+            _ => break,
+        }
+    }
+    out
+}
+
 // --- macOS process introspection ---
 
 mod platform {
@@ -236,6 +272,54 @@ mod platform {
             }
 
             Ok(path)
+        }
+    }
+
+    /// Look up the parent PID of a process via `proc_pidinfo` with
+    /// `PROC_PIDT_SHORTBSDINFO` (flavor 13). Returns None on any failure
+    /// or for pid <= 1.
+    pub fn proc_ppid(pid: u32) -> Option<u32> {
+        const PROC_PIDT_SHORTBSDINFO: libc::c_int = 13;
+
+        #[repr(C)]
+        struct ProcBsdShortInfo {
+            pbsi_pid: u32,
+            pbsi_ppid: u32,
+            pbsi_pgid: u32,
+            pbsi_status: u32,
+            pbsi_comm: [libc::c_char; 16],
+            pbsi_flags: u32,
+            pbsi_uid: u32,
+            pbsi_gid: u32,
+            pbsi_ruid: u32,
+            pbsi_rgid: u32,
+            pbsi_svuid: u32,
+            pbsi_svgid: u32,
+            pbsi_rfu: u32,
+        }
+
+        const _: () = assert!(
+            mem::size_of::<ProcBsdShortInfo>() == 64,
+            "ProcBsdShortInfo size mismatch — macOS struct layout may have changed"
+        );
+
+        if pid == 0 {
+            return None;
+        }
+        unsafe {
+            let mut info: ProcBsdShortInfo = mem::zeroed();
+            let size = mem::size_of::<ProcBsdShortInfo>() as libc::c_int;
+            let ret = libc::proc_pidinfo(
+                pid as libc::c_int,
+                PROC_PIDT_SHORTBSDINFO,
+                0,
+                &mut info as *mut _ as *mut libc::c_void,
+                size,
+            );
+            if ret <= 0 {
+                return None;
+            }
+            Some(info.pbsi_ppid)
         }
     }
 
@@ -418,6 +502,43 @@ mod tests {
     #[test]
     fn test_pid_alive_huge_pid_is_false() {
         assert!(!platform::pid_alive(u32::MAX - 1));
+    }
+
+    #[test]
+    fn test_proc_ppid_self_returns_parent() {
+        let self_pid = std::process::id();
+        let parent = platform::proc_ppid(self_pid).expect("self ppid should resolve");
+        assert!(parent > 0, "parent pid must be > 0");
+        assert_ne!(parent, self_pid, "parent must differ from self");
+    }
+
+    #[test]
+    fn test_proc_ppid_invalid_pid_returns_none() {
+        assert!(platform::proc_ppid(u32::MAX).is_none());
+    }
+
+    #[test]
+    fn test_get_process_ancestors_includes_self() {
+        // From our own pid, walking up should at least include us.
+        // Stop at pid 0 (never reached), bounded by hop limit.
+        let chain = get_process_ancestors(std::process::id(), 0);
+        assert!(!chain.is_empty(), "chain must include at least self");
+        assert_eq!(chain[0].pid, std::process::id());
+    }
+
+    #[test]
+    fn test_get_process_ancestors_stops_at_stop_pid() {
+        // start == stop → chain stops immediately, empty result.
+        let self_pid = std::process::id();
+        let chain = get_process_ancestors(self_pid, self_pid);
+        assert!(chain.is_empty(), "chain must be empty when start == stop");
+    }
+
+    #[test]
+    fn test_get_process_ancestors_bounded() {
+        // The walk must never exceed MAX_HOPS even with a permissive stop_pid.
+        let chain = get_process_ancestors(std::process::id(), 0);
+        assert!(chain.len() <= 8, "chain exceeded MAX_HOPS");
     }
 
     #[test]
