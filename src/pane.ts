@@ -998,6 +998,15 @@ export class Pane {
     }
   }
 
+  /** Public wrapper around the trust gate so the Edit-menu dispatcher
+   *  can decide whether to forward a Ctrl+V image-paste keystroke to the
+   *  TUI (Claude Code reads the clipboard itself via osascript on
+   *  Ctrl+V, see #520). Returns false on any lookup failure so callers
+   *  fall back to the text-paste path. */
+  async isTrustedAgentForeground(): Promise<boolean> {
+    return this.foregroundIsTrustedAgent();
+  }
+
   /** Public paste entrypoint — applies the same multi-line gate as the
    *  keyboard paste handler, so the macOS Edit menu and right-click menu
    *  can't bypass the paste-confirm dialog. */

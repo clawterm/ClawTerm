@@ -1,4 +1,5 @@
 import { Tab } from "./tab";
+import type { Pane } from "./pane";
 import { loadConfig, applyConfigToCSS, type Config } from "./config";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
@@ -1204,17 +1205,41 @@ export class TerminalManager {
     if (id === "editSelectAll") {
       pane.selectAll();
     } else if (id === "editPaste") {
-      navigator.clipboard.readText().then(
-        (text) => pane.requestPaste(text),
-        (e) => {
-          logger.debug("Clipboard read failed:", e);
-          showToast("Failed to read clipboard", "error");
-        },
-      );
+      void this.dispatchPaste(pane);
     } else {
       // editCopy / editCut — terminal has no cut concept; both copy the selection.
       const sel = pane.getSelection();
       if (sel) copyToClipboard(sel);
+    }
+  }
+
+  /** Paste pipeline for Cmd+V from the Edit menu. When the clipboard
+   *  holds an image and the pane's foreground is a trusted AI agent,
+   *  send Ctrl+V (\x16) to the pty so the agent can pull the image
+   *  from NSPasteboard itself (Claude Code shells out to osascript on
+   *  Ctrl+V — verified in the binary; see #520). For anything else
+   *  fall back to the normal text-paste path. */
+  private async dispatchPaste(pane: Pane): Promise<void> {
+    try {
+      const items = await navigator.clipboard.read();
+      const hasImage = items.some((item) =>
+        item.types.some((t) => t.startsWith("image/")),
+      );
+      if (hasImage && (await pane.isTrustedAgentForeground())) {
+        pane.writeToPty("\x16");
+        return;
+      }
+    } catch (e) {
+      // clipboard.read() can reject on permission / unsupported types —
+      // not an error condition, just fall through to text paste.
+      logger.debug("Clipboard image-check failed, falling back to text:", e);
+    }
+    try {
+      const text = await navigator.clipboard.readText();
+      pane.requestPaste(text);
+    } catch (e) {
+      logger.debug("Clipboard read failed:", e);
+      showToast("Failed to read clipboard", "error");
     }
   }
 
