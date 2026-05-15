@@ -21,8 +21,8 @@
       "icons/icon.icns"
     ],
     "category": "DeveloperTool",
-    "shortDescription": "A terminal emulator built for AI agents",
-    "longDescription": "ClawTerm is a fast, lightweight terminal emulator designed for running AI coding agents like Claude Code. Features vertical tab sidebar, process intelligence, and native performance.",
+    "shortDescription": "A Mac-native terminal workspace for running many AI agents at once.",
+    "longDescription": "ClawTerm is a Mac-native terminal built for focused technical workflows. Vertical tab sidebar, live agent status, split panes, per-pane context tracking, and desktop notifications — designed around running many AI coding agents at once without losing track of them.",
     "macOS": {
       "minimumSystemVersion": "11.0",
       "entitlements": "Entitlements.plist",
