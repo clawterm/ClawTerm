@@ -51,8 +51,12 @@
   /* --font-ui and --font-mono resolve to the same stack today — the split
      is kept so future surfaces (e.g. a docs viewer) can adopt a sans
      without touching every UI rule. */
-  --font-ui: "JetBrains Mono Variable", "JetBrains Mono", "SFMono-Regular", ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
-  --font-mono: "JetBrains Mono Variable", "JetBrains Mono", "SFMono-Regular", ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+  --font-ui:
+    "JetBrains Mono Variable", "JetBrains Mono", "SFMono-Regular", ui-monospace, "SF Mono", Menlo, Monaco,
+    Consolas, monospace;
+  --font-mono:
+    "JetBrains Mono Variable", "JetBrains Mono", "SFMono-Regular", ui-monospace, "SF Mono", Menlo, Monaco,
+    Consolas, monospace;
   --font-2xs: 8px;
   --font-xs: 10px;
   --font-sm: 11px;
