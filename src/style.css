@@ -1037,7 +1037,7 @@ body {
 }
 
 .settings-update-btn {
-  font-family: var(--font-ui);
+  font-family: var(--font-mono);
   border-radius: var(--radius-md);
 }
 
@@ -1175,7 +1175,7 @@ body {
   border: var(--border-width) solid var(--border-subtle);
   color: var(--text-secondary);
   font-size: var(--font-sm);
-  padding: 2px var(--space-3);
+  padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-sm);
   cursor: pointer;
 }
