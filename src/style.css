@@ -2155,8 +2155,11 @@ body {
 .worktree-existing {
   opacity: var(--opacity-subtle);
 }
+/* Section heading next to the new-branch form input — neutral text per
+   the green-usage rule. The Create button below carries --accent as the
+   single active element on the dialog (#536). */
 .worktree-create-label {
-  color: var(--accent);
+  color: var(--text-primary);
 }
 .worktree-new-section {
   padding: var(--space-3) var(--space-5);
