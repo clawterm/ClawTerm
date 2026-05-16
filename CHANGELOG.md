@@ -6,9 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [1.6.3] - 2026-05-16
+
 ### Fixed
 - **Pane text no longer stays stuck at the old column count after a window resize while terminals are streaming output.** `pane.fit()` defers `fitAddon.fit()` for 300ms whenever the PTY wrote in the last 300ms — that exists to stop a write/fit race from corrupting the saved scroll position (#177). The deferral rescheduled on every new fit request with no upper bound, so a pane streaming continuous output (an agent running, `tail -f`, a busy build) could defer its fit forever. Window resize goes through this deferred path; divider drag uses `forceFit` and bypasses it — which is exactly why "some terminals stay stuck and others don't" mid-stream. Two changes: (1) the deferral chain is now capped at 1000ms total wait, so a resize is always reflected within ~1s; (2) the window-resize `ResizeObserver` adds a 150ms settled-timer that force-fits every pane in the active tab once the resize gesture quiets down, mirroring divider-drag's `mouseup` semantics. The 300ms quiet-output check still wins when it can, preserving the scroll-jump guard for bursty output (#532)
 - **macOS Dock icon now refreshes after an in-app update.** The Dock and IconServices cache the icon per-bundle-path; replacing `Contents/Resources/icon.icns` in place (what `tauri-plugin-updater` does on macOS) doesn't invalidate either cache. Users who self-updated saw the OLD icon in the Dock until they `killall Dock` or restarted — most visibly when updating across the v1.6.0 brand refresh. A new macOS-gated Tauri command bumps the `.app` bundle directory's mtime via `std::fs` (no extra crates), which is what makes IconServices re-read the `.icns` on the next Dock query. The updater calls it right before `relaunch()`; failure is non-fatal. If you're already on a stale-iconed 1.6.x, `killall Dock` is the one-shot manual fix (#533)
+
 
 ## [1.6.2] - 2026-05-16
 
@@ -1250,7 +1253,8 @@ This release establishes Clawterm's visual identity, transforming the app from a
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v1.6.2...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v1.6.3...HEAD
+[1.6.3]: https://github.com/clawterm/clawterm/compare/v1.6.2...v1.6.3
 [1.6.2]: https://github.com/clawterm/clawterm/compare/v1.6.1...v1.6.2
 [1.6.1]: https://github.com/clawterm/clawterm/compare/v1.6.0...v1.6.1
 [1.6.0]: https://github.com/clawterm/clawterm/compare/v1.5.0...v1.6.0
