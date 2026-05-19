@@ -352,12 +352,27 @@ export class Pane {
       { signal: this.ac.signal },
     );
 
-    // Intercept paste to confirm multi-line text before sending to terminal
+    // Image-clipboard → Ctrl+V (trusted agents read images from
+    // NSPasteboard via osascript when they see \x16, see #520) plus the
+    // multi-line text gate (#508 / #519). Both run from the native DOM
+    // paste event now that Cmd+V routes through the AppKit paste:
+    // responder chain (#546) — reading clipboardData inside the handler
+    // is user-gesture, not a programmatic NSPasteboard read, so it
+    // doesn't trip the macOS pasteboard-consent UI.
     this.element.addEventListener(
       "paste",
       (e: ClipboardEvent) => {
-        const text = e.clipboardData?.getData("text");
-        if (!text || this.disposed) return;
+        if (this.disposed) return;
+        const types = e.clipboardData?.types;
+        const hasImage = types ? Array.from(types).some((t) => t.startsWith("image/")) : false;
+        const text = e.clipboardData?.getData("text") ?? "";
+        if (hasImage) {
+          e.preventDefault();
+          e.stopPropagation();
+          void this.handleImagePaste(text);
+          return;
+        }
+        if (!text) return;
         // Skip if single line or bracketed paste mode is active (app handles it)
         if (!text.includes("\n") || this.terminal.modes.bracketedPasteMode) return;
         e.preventDefault();
@@ -1014,13 +1029,34 @@ export class Pane {
     }
   }
 
-  /** Public wrapper around the trust gate so the Edit-menu dispatcher
-   *  can decide whether to forward a Ctrl+V image-paste keystroke to the
-   *  TUI (Claude Code reads the clipboard itself via osascript on
-   *  Ctrl+V, see #520). Returns false on any lookup failure so callers
-   *  fall back to the text-paste path. */
+  /** Public wrapper around the trust gate so the right-click paste
+   *  dispatcher can decide whether to forward a Ctrl+V image-paste
+   *  keystroke to the TUI (Claude Code reads the clipboard itself via
+   *  osascript on Ctrl+V, see #520). Returns false on any lookup
+   *  failure so callers fall back to the text-paste path. */
   async isTrustedAgentForeground(): Promise<boolean> {
     return this.foregroundIsTrustedAgent();
+  }
+
+  /** Image clipboard branch of the DOM paste listener (#520, #546).
+   *  Trusted-agent foreground gets a Ctrl+V passed to the pty so the
+   *  agent can pull the image from NSPasteboard itself. Anything else
+   *  falls back to the text portion of the clipboard (which may be
+   *  empty for image-only clipboards) with the same multi-line gate
+   *  the text-only path uses. */
+  private async handleImagePaste(text: string): Promise<void> {
+    if (this.disposed) return;
+    if (await this.foregroundIsTrustedAgent()) {
+      if (this.disposed) return;
+      this.writeToPty("\x16");
+      return;
+    }
+    if (this.disposed || !text) return;
+    if (text.includes("\n") && !this.terminal.modes.bracketedPasteMode) {
+      void this.pasteWithAgentTrust(text);
+    } else {
+      this.terminal.paste(text);
+    }
   }
 
   /** Public paste entrypoint — applies the same multi-line gate as the
