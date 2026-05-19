@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [1.6.4] - 2026-05-19
+
 ### Fixed
 - **Cmd+V now actually pastes again.** #531 (shipped in 1.6.2) dropped the `CmdOrCtrl+V` accelerator from the custom Edit → Paste `MenuItemBuilder` on the theory that Cmd+V would fall through to WebKit and dispatch a DOM `paste` event. It doesn't — WKWebView's Cmd+V handling needs an `NSMenuItem` with the `paste:` action selector seeded onto the responder chain, which a custom-action menu item never installs. After #531, no item registered `paste:`, so Cmd+V was swallowed and no paste event fired; paste only worked via the Edit-menu click and right-click paths (both of which kept triggering the consent UI #531 was meant to remove). The Edit → Paste item is now `PredefinedMenuItem::paste`, which builds an `NSMenuItem` with `action: paste:` and the standard Cmd+V key equivalent. Cmd+V now routes through WebKit's native paste — NSText reads NSPasteboard, dispatches a real DOM `paste` event on the focused element, and the pane listener handles agent-trust gating and image-clipboard detection (the latter moved into the pane listener from `terminal-manager.ts::dispatchPaste`, which is no longer on the keyboard path). The pasteboard-consent UI does not appear on Cmd+V because the native paste action does not go through `navigator.clipboard.readText()` (#546)
 
@@ -1257,7 +1259,8 @@ This release establishes Clawterm's visual identity, transforming the app from a
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v1.6.3...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v1.6.4...HEAD
+[1.6.4]: https://github.com/clawterm/clawterm/compare/v1.6.3...v1.6.4
 [1.6.3]: https://github.com/clawterm/clawterm/compare/v1.6.2...v1.6.3
 [1.6.2]: https://github.com/clawterm/clawterm/compare/v1.6.1...v1.6.2
 [1.6.1]: https://github.com/clawterm/clawterm/compare/v1.6.0...v1.6.1
