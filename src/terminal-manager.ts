@@ -645,6 +645,10 @@ export class TerminalManager {
           // Window came back to focus — wake the poll loop so the user
           // sees fresh state instead of waiting on the idle interval. (#456)
           this.wake();
+          // The user may have granted notification permission externally
+          // (System Settings) since we last checked — re-query so the next
+          // OSC banner fires without an app restart. (#550)
+          this.notifications.recheckPermission();
           // Refresh menu accelerators + disabled set so the process-level
           // macOS menu reflects this window after a focus swap. (#522)
           if (isMac) {
