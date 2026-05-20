@@ -476,14 +476,6 @@ export class TerminalManager {
       if (!tab) return;
       tab.state.lastError = `Server on :${port} crashed`;
       this.scheduleRender();
-
-      const event: OutputEvent = {
-        type: "server-crashed",
-        detail: `Server on port ${port} stopped responding`,
-        timestamp: Date.now(),
-        port,
-      };
-      this.notifications.notify(event, tab.title, tabId, this.activeTabId === tabId);
     });
   }
 
@@ -782,14 +774,15 @@ export class TerminalManager {
 
     tab.onNeedsAttention = () => {
       this.scheduleRender();
-      this.notifications.notifyCommandComplete(tab.title, tab.id, this.activeTabId === tab.id);
     };
 
     tab.onOscNotification = (text) => {
-      // OSC 9;2 → system notification routed through NotificationManager,
-      // gated by config.notifications.types.agentWaiting (#517). The sidebar
-      // attention dot is handled separately via the onNeedsAttention path.
-      this.notifications.notifyAgentAttention(text, tab.title, tab.id, this.activeTabId === tab.id);
+      // OSC 9;2 is the single notification surface (#547). Suppress for
+      // muted tabs and for the active tab (user is already looking at it).
+      // The sidebar attention dot is handled separately in Tab.handleOscNotification.
+      if (tab.muted) return;
+      if (this.activeTabId === tab.id && !document.hidden) return;
+      this.notifications.notifyAgentAttention(text, tab.title, tab.id);
     };
 
     tab.onOutputEvent = (event: OutputEvent) => {
@@ -998,18 +991,12 @@ export class TerminalManager {
     }, 500);
   }
 
-  private handleTabOutputEvent(tabId: string, tab: Tab, event: OutputEvent) {
-    // Track servers
+  private handleTabOutputEvent(tabId: string, _tab: Tab, event: OutputEvent) {
+    // Track servers for the "Open localhost:PORT in Browser" context menu.
+    // No system notification fires for server events — irrelevant to the
+    // app's purpose, was noise (#547).
     if (event.type === "server-started" && event.port) {
       this.serverTracker.addServer(tabId, event.port);
-    }
-
-    // Forward to notifications (skip if tab is muted)
-    // Include branch name for context-rich notifications
-    if (!tab.muted) {
-      const branch = tab.state.gitBranch;
-      const titleWithBranch = branch ? `${tab.title} [${branch}]` : tab.title;
-      this.notifications.notify(event, titleWithBranch, tabId, this.activeTabId === tabId);
     }
 
     // Re-render UI (coalesced — multiple output events per frame become one render)

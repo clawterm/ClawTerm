@@ -42,13 +42,6 @@ describe("validateConfig", () => {
       notifications: {
         enabled: true,
         sound: true,
-        types: {
-          completion: { enabled: true, sound: false },
-          agentWaiting: { enabled: true, sound: true },
-          serverStarted: { enabled: true, sound: false },
-          serverCrashed: { enabled: true, sound: true },
-          error: { enabled: true, sound: false },
-        },
       },
       advanced: {
         pollIntervalMs: 2000,
