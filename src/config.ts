@@ -8,7 +8,7 @@ export type { Config, UserMatcher } from "./config-types";
 import type { Config } from "./config-types";
 
 /** Current config schema version. Bump when adding/changing config fields. */
-const CONFIG_VERSION = 3;
+const CONFIG_VERSION = 4;
 
 /** Return the default shell. */
 function defaultShell(): string {
@@ -127,7 +127,6 @@ export const DEFAULT_CONFIG: Config = {
   },
   notifications: {
     enabled: true,
-    sound: true,
   },
   updates: {
     autoCheck: true,
@@ -339,8 +338,7 @@ function migrateConfig(config: Record<string, unknown>): void {
   }
 
   // Migration 2 → 3: drop legacy notifications.types subtree — only OSC 9;2
-  // (agentWaiting) is a notification surface now, gated by the top-level
-  // notifications.enabled / .sound. (#547)
+  // (agentWaiting) is a notification surface now. (#547)
   if (version < 3) {
     config.configVersion = 3;
     const notifications = config.notifications as Record<string, unknown> | undefined;
@@ -348,6 +346,19 @@ function migrateConfig(config: Record<string, unknown>): void {
       delete notifications.types;
     }
     logger.debug("Migrated config from v2 to v3");
+  }
+
+  // Migration 3 → 4: drop notifications.sound — the Web Audio chime
+  // bypassed macOS Focus/DND and was redundant with the OS notification
+  // sound. Notifications are now silent app-side; OS sound (if any) is
+  // controlled by macOS notification settings.
+  if (version < 4) {
+    config.configVersion = 4;
+    const notifications = config.notifications as Record<string, unknown> | undefined;
+    if (notifications && "sound" in notifications) {
+      delete notifications.sound;
+    }
+    logger.debug("Migrated config from v3 to v4");
   }
 
   // Migration: strip legacy theme fields from user config

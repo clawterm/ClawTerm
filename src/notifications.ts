@@ -7,17 +7,14 @@ import {
 
 export interface NotificationsConfig {
   enabled: boolean;
-  sound: boolean;
 }
 
 export const DEFAULT_NOTIFICATIONS_CONFIG: NotificationsConfig = {
   enabled: true,
-  sound: true,
 };
 
 export class NotificationManager {
   private config: NotificationsConfig;
-  private audioCtx: AudioContext | null = null;
   private permissionGranted = false;
   private notifCounter = 0;
   /** Set this callback to handle notification clicks (focus a tab). */
@@ -54,15 +51,10 @@ export class NotificationManager {
   notifyAgentAttention(text: string, tabTitle: string, tabId: string) {
     logger.debug(`[notifyAgentAttention] tab=${tabId} title=${tabTitle}`);
     if (!this.config.enabled) return;
+    if (!this.permissionGranted) return;
 
-    if (this.permissionGranted) {
-      const body = text ? `${tabTitle}: ${text}` : `${tabTitle} needs attention`;
-      this.sendWithClickSupport("ClawTerm", body, tabId);
-    }
-
-    if (this.config.sound) {
-      this.playAttentionTone();
-    }
+    const body = text ? `${tabTitle}: ${text}` : `${tabTitle} needs attention`;
+    this.sendWithClickSupport("ClawTerm", body, tabId);
   }
 
   /** Send a notification with click-to-focus support.
@@ -71,7 +63,7 @@ export class NotificationManager {
   private sendWithClickSupport(title: string, body: string, tabId: string) {
     if (typeof Notification !== "undefined" && Notification.permission === "granted") {
       try {
-        const webNotif = new Notification(title, { body, tag: tabId });
+        const webNotif = new Notification(title, { body, tag: tabId, silent: true });
         webNotif.onclick = () => {
           if (this.onFocusTab) {
             this.onFocusTab(tabId);
@@ -98,49 +90,7 @@ export class NotificationManager {
     }
   }
 
-  private getAudioContext(): AudioContext {
-    if (!this.audioCtx) {
-      this.audioCtx = new AudioContext();
-    }
-    return this.audioCtx;
-  }
-
   dispose() {
-    if (this.audioCtx) {
-      this.audioCtx.close();
-      this.audioCtx = null;
-    }
     this.onFocusTab = null;
-  }
-
-  /** Two-tone chime for agent attention. */
-  private playAttentionTone() {
-    try {
-      const ctx = this.getAudioContext();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-
-      osc.frequency.value = 880;
-      osc.type = "sine";
-      gain.gain.setValueAtTime(0.15, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.3);
-
-      const osc2 = ctx.createOscillator();
-      const gain2 = ctx.createGain();
-      osc2.connect(gain2);
-      gain2.connect(ctx.destination);
-      osc2.frequency.value = 1100;
-      osc2.type = "sine";
-      gain2.gain.setValueAtTime(0.15, ctx.currentTime + 0.15);
-      gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.45);
-      osc2.start(ctx.currentTime + 0.15);
-      osc2.stop(ctx.currentTime + 0.45);
-    } catch (e) {
-      logger.debug("Audio playback failed:", e);
-    }
   }
 }

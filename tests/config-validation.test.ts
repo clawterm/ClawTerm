@@ -41,7 +41,6 @@ describe("validateConfig", () => {
       outputAnalysis: { enabled: true, bufferSize: 4096 },
       notifications: {
         enabled: true,
-        sound: true,
       },
       advanced: {
         pollIntervalMs: 2000,
