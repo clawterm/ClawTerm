@@ -1579,6 +1579,7 @@ export class TerminalManager {
     }
 
     this.serverTracker.removeServer(id);
+    this.notifications.clearTab(id);
     try {
       tab.dispose();
     } catch (e) {

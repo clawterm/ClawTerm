@@ -14,12 +14,20 @@ export const DEFAULT_NOTIFICATIONS_CONFIG: NotificationsConfig = {
   enabled: true,
 };
 
+/** Minimum gap between consecutive system banners for the same tab. A
+ *  misbehaving agent (or a bad Claude Code hook) can emit OSC 9;2 in a
+ *  loop; without this, the user gets a banner storm. The sidebar dot
+ *  still updates idempotently — only the *banner* is throttled. (#551) */
+const PER_TAB_COOLDOWN_MS = 4000;
+
 export class NotificationManager {
   private config: NotificationsConfig;
   private permissionGranted = false;
   /** True after the user has been told once that the OS is blocking notifications.
    *  Stops the toast from re-appearing on every OSC after a single denial. (#550) */
   private surfacedDenial = false;
+  /** When each tab last fired a system banner — used for per-tab cooldown. (#551) */
+  private lastSentAt: Map<string, number> = new Map();
   private notifCounter = 0;
   /** Set this callback to handle notification clicks (focus a tab). */
   onFocusTab: ((tabId: string) => void) | null = null;
@@ -83,8 +91,28 @@ export class NotificationManager {
       return;
     }
 
+    // Per-tab cooldown: drop banner if we just fired one for this tab.
+    // Same-tab Web Notifications with `tag: tabId` already replace each
+    // other at the OS level, so without throttling, a looping agent burns
+    // through notification-center retention with redundant replacements
+    // — and on platforms without tag-coalescing, stacks visible banners
+    // until the user is overwhelmed. (#551)
+    const now = Date.now();
+    const last = this.lastSentAt.get(tabId) ?? 0;
+    if (now - last < PER_TAB_COOLDOWN_MS) {
+      logger.debug(`[notifyAgentAttention] cooldown hit for tab=${tabId} (${now - last}ms)`);
+      return;
+    }
+    this.lastSentAt.set(tabId, now);
+
     const body = text ? `${tabTitle}: ${text}` : `${tabTitle} needs attention`;
     this.sendWithClickSupport("ClawTerm", body, tabId);
+  }
+
+  /** Drop a tab's cooldown record when the tab closes — keeps the map
+   *  from growing unbounded across long sessions. (#551) */
+  clearTab(tabId: string) {
+    this.lastSentAt.delete(tabId);
   }
 
   /** Tell the user once per session that the OS is blocking notifications.
