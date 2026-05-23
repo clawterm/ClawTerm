@@ -33,6 +33,7 @@ import { showShortcutsOverlay } from "./shortcuts-overlay";
 import { manualCheckForUpdates } from "./updater";
 import { showCommandPalette, type PaletteCommand } from "./command-palette";
 import { showNotificationSettings } from "./notification-settings";
+import { NotificationTray, showNotificationTray } from "./notification-tray";
 import { createKeyHandler, type KeybindingActions } from "./keybinding-handler";
 import { TabRenderer } from "./tab-renderer";
 import { perfMetrics } from "./perf";
@@ -113,6 +114,7 @@ export class TerminalManager {
   private activeProjectIndex = 0;
   private dragProjectIndex: number | null = null;
   private notifications!: NotificationManager;
+  private notificationTray = new NotificationTray();
   private serverTracker!: ServerTracker;
   private tabSwitcher = new TabSwitcher();
   private tabRenderer!: TabRenderer;
@@ -216,6 +218,13 @@ export class TerminalManager {
     this.config = config;
     this.notifications = new NotificationManager(this.config.notifications);
     this.notifications.onFocusTab = (tabId) => {
+      if (this.tabs.has(tabId)) {
+        getCurrentWindow().setFocus();
+        this.switchToTab(tabId);
+      }
+    };
+    // Tray click → same effect as a banner click. (#554)
+    this.notificationTray.onFocusTab = (tabId) => {
       if (this.tabs.has(tabId)) {
         getCurrentWindow().setFocus();
         this.switchToTab(tabId);
@@ -779,6 +788,15 @@ export class TerminalManager {
 
     tab.onOscNotification = (text) => {
       this.notifications.notifyAgentAttention(text, tab.title, tab.id);
+      // Always record in the tray — even if the banner is suppressed
+      // (active tab, mute, cooldown). The tray is the "what did I miss"
+      // surface; suppression rules are for system banners only. (#554)
+      this.notificationTray.push({
+        tabId: tab.id,
+        tabTitle: tab.title,
+        text,
+        timestamp: Date.now(),
+      });
     };
 
     tab.onOutputEvent = (event: OutputEvent) => {
@@ -825,6 +843,7 @@ export class TerminalManager {
       logger.warn(`Tab ${id}: PTY failed to start, removing tab`);
       tab.dispose();
       this.notifications.clearTab(id);
+      this.notificationTray.clearTab(id);
       this.tabs.delete(id);
       this.renderTabList();
       return;
@@ -1024,6 +1043,9 @@ export class TerminalManager {
     this.activeProject.activeTabId = id;
     const tab = this.tabs.get(id);
     if (tab) tab.show();
+    // User is now looking at this tab — anything in the tray for it
+    // counts as read. (#554)
+    this.notificationTray.acknowledgeTab(id);
 
     this.renderTabList();
     this.persistSession();
@@ -1436,6 +1458,15 @@ export class TerminalManager {
           }),
       },
       {
+        id: "notifications-tray",
+        label:
+          this.notificationTray.unreadCount() > 0
+            ? `Notifications (${this.notificationTray.unreadCount()} unread)`
+            : "Notifications",
+        category: "Terminal",
+        action: () => showNotificationTray(this.notificationTray),
+      },
+      {
         id: "cycle-attention",
         label: "Cycle Attention Tabs",
         category: "Tabs",
@@ -1587,6 +1618,7 @@ export class TerminalManager {
 
     this.serverTracker.removeServer(id);
     this.notifications.clearTab(id);
+    this.notificationTray.clearTab(id);
     try {
       tab.dispose();
     } catch (e) {
@@ -1720,6 +1752,7 @@ export class TerminalManager {
       if (tab) {
         this.serverTracker.removeServer(tabId);
         this.notifications.clearTab(tabId);
+        this.notificationTray.clearTab(tabId);
         try {
           tab.dispose();
         } catch {

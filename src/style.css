@@ -2062,6 +2062,71 @@ body {
   line-height: 1.5;
 }
 
+/* Missed events tray — list of recent OSC 9;2 banners with click-to-focus.
+ * (#554) */
+.notification-tray-modal {
+  max-height: 480px;
+  padding: 0;
+}
+.notification-tray-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: var(--border-width) solid var(--border-subtle);
+  color: var(--text-primary);
+  font-size: var(--font-md);
+  font-weight: var(--font-weight-medium);
+}
+.notification-tray-clear-btn {
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--font-sm);
+}
+.notification-tray-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-2) 0;
+}
+.notification-tray-empty {
+  padding: var(--space-5) var(--space-5);
+  color: var(--text-tertiary);
+  font-size: var(--font-base);
+  text-align: center;
+}
+.notification-tray-row {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: var(--space-3) var(--space-5);
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.notification-tray-row:hover {
+  background: var(--bg-hover);
+}
+.notification-tray-row.ack {
+  opacity: 0.55;
+}
+.notification-tray-row-title {
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-1);
+}
+.notification-tray-row-text {
+  font-size: var(--font-base);
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.notification-tray-row-age {
+  font-size: var(--font-xs);
+  color: var(--text-tertiary);
+  margin-top: var(--space-1);
+}
+
 .palette-input {
   width: 100%;
   padding: var(--space-4) var(--space-5);
