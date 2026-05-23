@@ -1803,6 +1803,36 @@ body {
   border: var(--border-width) solid var(--border-default);
   box-sizing: border-box;
   animation: update-fade-in 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Download progress — hairline along the bottom edge of the notice, fills
+ * left-to-right as bytes land. Hidden by default (data-state attribute is
+ * "downloading" or "installing" while visible). Width is set inline from
+ * updateNoticeProgress(). When total bytes are unknown, the bar stays at
+ * 0% and we let the textual "Downloading…" label carry the signal — better
+ * than faking a percentage. (#529) */
+.update-notice-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: transparent;
+  pointer-events: none;
+}
+
+.update-notice-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+  transition: width 0.2s ease-out;
+  border-radius: 0;
+}
+
+.update-notice[data-state="installing"] .update-notice-progress-fill {
+  width: 100%;
 }
 
 @keyframes update-fade-in {

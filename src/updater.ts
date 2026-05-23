@@ -141,11 +141,15 @@ async function downloadPending(): Promise<void> {
       if (event.event === "Started") {
         totalBytes = event.data.contentLength ?? 0;
         downloadedBytes = 0;
-        updateNoticeProgress("Downloading…");
+        updateNoticeProgress("Downloading…", totalBytes ? 0 : undefined);
       } else if (event.event === "Progress") {
         downloadedBytes += event.data.chunkLength;
-        const pct = totalBytes ? Math.round((downloadedBytes / totalBytes) * 100) : 0;
-        updateNoticeProgress(totalBytes ? `Downloading… ${pct}%` : "Downloading…");
+        if (totalBytes) {
+          const pct = Math.round((downloadedBytes / totalBytes) * 100);
+          updateNoticeProgress(`Downloading… ${pct}%`, pct);
+        } else {
+          updateNoticeProgress("Downloading…");
+        }
       }
     });
     setState("staged");
@@ -183,13 +187,17 @@ async function installPending({ relaunchAfter }: { relaunchAfter: boolean }): Pr
         if (event.event === "Started") {
           totalBytes = event.data.contentLength ?? 0;
           downloadedBytes = 0;
-          updateNoticeProgress("Downloading…");
+          updateNoticeProgress("Downloading…", totalBytes ? 0 : undefined);
         } else if (event.event === "Progress") {
           downloadedBytes += event.data.chunkLength;
-          const pct = totalBytes ? Math.round((downloadedBytes / totalBytes) * 100) : 0;
-          updateNoticeProgress(totalBytes ? `Downloading… ${pct}%` : "Downloading…");
+          if (totalBytes) {
+            const pct = Math.round((downloadedBytes / totalBytes) * 100);
+            updateNoticeProgress(`Downloading… ${pct}%`, pct);
+          } else {
+            updateNoticeProgress("Downloading…");
+          }
         } else if (event.event === "Finished") {
-          updateNoticeProgress("Installing…");
+          updateNoticeProgress("Installing…", 100);
         }
       });
     } else {
@@ -394,11 +402,19 @@ function showUpdateConfirm(version: string, releaseNotes: string, onConfirm: () 
   confirmBtn.focus();
 }
 
-function updateNoticeProgress(text: string): void {
+/** Update the notice's button label and (if known) the progress-bar fill.
+ *  Omit `pct` for indeterminate states — the textual label carries the
+ *  signal alone. `pct` of 100 is allowed and fills the bar. (#529) */
+function updateNoticeProgress(text: string, pct?: number): void {
   const btn = document.querySelector(".update-notice-action") as HTMLButtonElement | null;
   if (btn) {
     btn.textContent = text;
     btn.disabled = true;
+  }
+  const fill = document.querySelector(".update-notice-progress-fill") as HTMLElement | null;
+  if (fill && pct !== undefined) {
+    const clamped = Math.max(0, Math.min(100, pct));
+    fill.style.width = `${clamped}%`;
   }
 }
 
@@ -446,9 +462,18 @@ function showUpdateNotice(version: string, releaseNotes: string): void {
   const btn = document.createElement("button");
   btn.className = "btn btn--primary update-notice-action";
 
+  // Thin green progress bar along the bottom edge of the notice. Width is
+  // driven by updateNoticeProgress(). (#529)
+  const progress = document.createElement("div");
+  progress.className = "update-notice-progress";
+  const progressFill = document.createElement("div");
+  progressFill.className = "update-notice-progress-fill";
+  progress.appendChild(progressFill);
+
   notice.appendChild(dot);
   notice.appendChild(text);
   notice.appendChild(btn);
+  notice.appendChild(progress);
 
   footer.insertBefore(notice, footer.firstChild);
 
@@ -471,11 +496,15 @@ function showUpdateNotice(version: string, releaseNotes: string): void {
 /** Update the notice label + button to match `updateState`. Pure render —
  *  safe to call any number of times. */
 function renderNoticeForState(): void {
-  const notice = document.querySelector(".update-notice");
+  const notice = document.querySelector(".update-notice") as HTMLElement | null;
   if (!notice) return;
   const label = notice.querySelector(".update-notice-label") as HTMLElement | null;
   const btn = notice.querySelector(".update-notice-action") as HTMLButtonElement | null;
   if (!label || !btn) return;
+
+  // Drive the progress-bar visibility/data-state attribute alongside the
+  // label and button. Fill width is set inline by updateNoticeProgress(). (#529)
+  notice.setAttribute("data-state", updateState);
 
   switch (updateState) {
     case "available":
