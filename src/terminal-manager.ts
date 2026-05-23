@@ -32,6 +32,7 @@ import { createSettingsPanel } from "./shortcuts-panel";
 import { showShortcutsOverlay } from "./shortcuts-overlay";
 import { manualCheckForUpdates } from "./updater";
 import { showCommandPalette, type PaletteCommand } from "./command-palette";
+import { showNotificationSettings } from "./notification-settings";
 import { createKeyHandler, type KeybindingActions } from "./keybinding-handler";
 import { TabRenderer } from "./tab-renderer";
 import { perfMetrics } from "./perf";
@@ -1419,6 +1420,20 @@ export class TerminalManager {
         label: "Settings",
         category: "Terminal",
         action: () => this.toggleSettingsPanel(),
+      },
+      {
+        id: "notification-settings",
+        label: "Notification Settings",
+        category: "Terminal",
+        action: () =>
+          showNotificationSettings({
+            notifications: this.notifications,
+            config: this.config.notifications,
+            onChange: (next) => {
+              this.config.notifications = next;
+              this.persistConfig();
+            },
+          }),
       },
       {
         id: "cycle-attention",
