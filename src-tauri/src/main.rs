@@ -256,6 +256,26 @@ fn main() {
             app.manage(menu::MenuState::default());
             let handle = app.handle().clone();
             menu::build_and_set(&handle)?;
+
+            // Periodic claude_status stale-file sweep (#567). The frontend's
+            // call to setup_claude_statusline triggers an initial sweep at
+            // boot, but agent processes that come and go during a long
+            // ClawTerm session each leave a <pid>.json behind in
+            // /tmp/clawterm-status/. For users running multi-week sessions
+            // (the workflow this app is designed around) the dir would
+            // otherwise grow until the next ClawTerm restart. The sweep
+            // is cheap (single read_dir + pid_alive per entry) and idempotent.
+            std::thread::Builder::new()
+                .name("claude-status-sweeper".into())
+                .spawn(|| {
+                    let interval = std::time::Duration::from_secs(60 * 60);
+                    loop {
+                        std::thread::sleep(interval);
+                        process_info::sweep_stale_claude_status_files();
+                    }
+                })
+                .ok();
+
             Ok(())
         })
         .on_menu_event(|app, event| {
