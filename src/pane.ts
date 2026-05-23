@@ -1312,6 +1312,26 @@ export class Pane {
     return this.webgl?.getImageStorageMb() ?? 0;
   }
 
+  /** Current scrollback-buffer line count (used by memory-diagnostics). The
+   *  active buffer's `length` is the total rows including the visible viewport,
+   *  which is the most honest representation of what xterm.js has allocated. */
+  getScrollbackLines(): number {
+    return this.terminal.buffer.active.length;
+  }
+
+  /** Hidden-pane PTY-write backlog in bytes (#566). 0 when the pane is
+   *  visible or has drained the queue. Useful to attribute "why is this
+   *  pane heavy?" when a background tab is being slammed with output. */
+  getPendingBytes(): number {
+    return this.pendingBytes;
+  }
+
+  /** Whether this pane currently has a WebGL renderer attached. Used by
+   *  memory-diagnostics to count pool occupancy. (#566) */
+  isWebGLActive(): boolean {
+    return this.webgl?.active ?? false;
+  }
+
   /** Read the last N lines from the terminal buffer (for content-based status detection). */
   getLastLines(count: number): string[] {
     const buf = this.terminal.buffer.active;

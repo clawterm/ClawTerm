@@ -383,6 +383,14 @@ const BRANCH_COLORS = [
 ];
 const BRANCH_COLOR_CACHE_MAX = 256;
 const branchColorCache = new Map<string, string>();
+
+/** Diagnostic accessor: number of distinct branches that have been
+ *  color-assigned this session, paired with the bounded ceiling. Surfaced
+ *  by the memory-diagnostics command (#566). */
+export function getBranchColorCacheSize(): { size: number; max: number } {
+  return { size: branchColorCache.size, max: BRANCH_COLOR_CACHE_MAX };
+}
+
 export function branchColor(branch: string): string {
   const cached = branchColorCache.get(branch);
   if (cached !== undefined) return cached;

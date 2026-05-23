@@ -236,6 +236,20 @@ fn refresh_macos_bundle_icon_cache() -> Result<(), String> {
     Ok(())
 }
 
+/// Resident memory + statusline-dir occupancy for the memory-diagnostics
+/// modal (#566). Returns 0/0 instead of failing so the UI can show "?"
+/// for the unknown bits without surfacing an error path for what is a
+/// best-effort diagnostic.
+#[tauri::command]
+fn get_memory_diagnostics() -> serde_json::Value {
+    let rss = process_info::self_resident_size().unwrap_or(0);
+    let statusline_files = process_info::count_claude_status_files();
+    serde_json::json!({
+        "rssBytes": rss,
+        "statuslineFiles": statusline_files,
+    })
+}
+
 fn main() {
     // Clean env vars that prevent tools from running inside our PTYs
     std::env::remove_var("CLAUDECODE");
@@ -306,6 +320,7 @@ fn main() {
             has_legacy_in_repo_worktrees,
             validate_shell,
             setup_claude_statusline,
+            get_memory_diagnostics,
             refresh_macos_bundle_icon_cache,
             menu::apply_menu_accelerators,
             menu::apply_menu_disabled,

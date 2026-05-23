@@ -34,6 +34,8 @@ import { manualCheckForUpdates } from "./updater";
 import { showCommandPalette, type PaletteCommand } from "./command-palette";
 import { showNotificationSettings } from "./notification-settings";
 import { NotificationTray, showNotificationTray } from "./notification-tray";
+import { showMemoryDiagnostics } from "./memory-diagnostics";
+import { WEBGL_POOL_MAX } from "./pane-webgl";
 import { createKeyHandler, type KeybindingActions } from "./keybinding-handler";
 import { TabRenderer } from "./tab-renderer";
 import { perfMetrics } from "./perf";
@@ -158,6 +160,10 @@ export class TerminalManager {
   private configWriteTimer: ReturnType<typeof setTimeout> | null = null;
   /** AbortController for document-level event listeners — aborted on dispose */
   private readonly ac = new AbortController();
+  /** Epoch ms captured when this TerminalManager is constructed — surfaced
+   *  by the memory-diagnostics modal so a 5-min session and a 3-week session
+   *  can be told apart at a glance. (#566) */
+  private readonly startedAt = Date.now();
 
   /** Unlock a worktree and then remove it. Unlock is needed because we lock
    *  worktrees on creation to protect them from accidental deletion by agents. */
@@ -1458,6 +1464,18 @@ export class TerminalManager {
           console.log(perfMetrics.getSummary());
           showToast("Performance stats logged to console", "info");
         },
+      },
+      {
+        id: "memory-diagnostics",
+        label: "Memory Diagnostics",
+        category: "Debug",
+        action: () =>
+          showMemoryDiagnostics({
+            tabs: this.tabs,
+            notificationTray: this.notificationTray,
+            startedAt: this.startedAt,
+            webglMax: WEBGL_POOL_MAX,
+          }),
       },
       {
         id: "open-config",

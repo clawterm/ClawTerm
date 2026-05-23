@@ -139,6 +139,31 @@ fn claude_status_path_if_fresh(pid: u32) -> Option<std::path::PathBuf> {
     Some(path)
 }
 
+/// RSS of the ClawTerm process itself, for the memory-diagnostics modal
+/// (#566). Returns None on syscall failure rather than 0 so the caller can
+/// distinguish "unknown" from "zero". Reuses `proc_resident_size` so the
+/// PROC_PIDTASKINFO struct layout has one source of truth.
+pub fn self_resident_size() -> Option<u64> {
+    platform::proc_resident_size(std::process::id())
+}
+
+/// Count `<pid>.json` files currently in `CLAUDE_STATUS_DIR` — diagnostic
+/// signal for the memory-diagnostics modal (#566). A multi-week session
+/// with this number climbing suggests the periodic sweep (#567) isn't
+/// keeping up, or agents are dying faster than once an hour.
+pub fn count_claude_status_files() -> u32 {
+    let Ok(entries) = std::fs::read_dir(CLAUDE_STATUS_DIR) else {
+        return 0;
+    };
+    let mut n: u32 = 0;
+    for entry in entries.flatten() {
+        if entry.path().file_stem().and_then(|s| s.to_str()).and_then(|s| s.parse::<u32>().ok()).is_some() {
+            n += 1;
+        }
+    }
+    n
+}
+
 /// Remove any `<pid>.json` files in `CLAUDE_STATUS_DIR` whose PID is no
 /// longer alive. Called at startup from `setup_claude_statusline` and
 /// then hourly by the claude-status-sweeper thread (#567) — keeps the

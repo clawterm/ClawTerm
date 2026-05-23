@@ -7,9 +7,15 @@ import { logger } from "./logger";
  * browser exhaustion (#135) while keeping recently-used tabs' contexts alive
  * to eliminate create/destroy overhead on tab switch (#290).
  */
+/** Ceiling on concurrent WebGL contexts (#290). Sized to leave headroom
+ *  below the browser's hard limit (typically 8-16 — exhausting it kills
+ *  all contexts at once). Exported so the memory-diagnostics modal can
+ *  surface "active/max" (#566). */
+export const WEBGL_POOL_MAX = 6;
+
 class WebGLPool {
   private lru: WebGLManager[] = [];
-  private readonly maxContexts = 6; // Leave headroom below browser limit (8-16)
+  private readonly maxContexts = WEBGL_POOL_MAX;
 
   /** Register a manager as actively using a WebGL context. */
   touch(manager: WebGLManager): void {

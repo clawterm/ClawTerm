@@ -2062,6 +2062,38 @@ body {
   line-height: 1.5;
 }
 
+/* Memory diagnostics modal — text report + copy button. (#566) */
+.memory-diagnostics-modal {
+  max-height: 70vh;
+  padding: var(--space-5);
+  gap: var(--space-4);
+  min-width: 640px;
+}
+.memory-diagnostics-title {
+  font-size: var(--font-md);
+  color: var(--text-primary);
+  font-weight: var(--font-weight-medium);
+}
+.memory-diagnostics-report {
+  font-family: var(--font-mono);
+  font-size: var(--font-sm);
+  color: var(--text-primary);
+  background: var(--bg-base);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  margin: 0;
+  overflow: auto;
+  white-space: pre;
+  max-height: 50vh;
+  user-select: text;
+}
+.memory-diagnostics-actions {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: flex-end;
+}
+
 /* Missed events tray — list of recent OSC 9;2 banners with click-to-focus.
  * (#554) */
 .notification-tray-modal {
