@@ -788,15 +788,22 @@ export class TerminalManager {
 
     tab.onOscNotification = (text) => {
       this.notifications.notifyAgentAttention(text, tab.title, tab.id);
-      // Always record in the tray — even if the banner is suppressed
-      // (active tab, mute, cooldown). The tray is the "what did I miss"
-      // surface; suppression rules are for system banners only. (#554)
+      // Always record in the tray — even when the banner is suppressed
+      // (mute, cooldown). The tray is the "what did I miss" surface;
+      // banner suppression rules are for system banners only. (#554)
       this.notificationTray.push({
         tabId: tab.id,
         tabTitle: tab.title,
         text,
         timestamp: Date.now(),
       });
+      // If the user is actively looking at this tab right now, they
+      // already saw the message scroll past in the terminal — pre-ack so
+      // the tray doesn't claim it as unread. (Acknowledge on switchToTab
+      // covers the away-and-back case; this covers stay-and-watch.)
+      if (this.activeTabId === tab.id && this.isWindowFocused) {
+        this.notificationTray.acknowledgeTab(tab.id);
+      }
     };
 
     tab.onCommandComplete = (processName, durationMs) => {

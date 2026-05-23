@@ -412,7 +412,7 @@ function updateNoticeProgress(text: string, pct?: number): void {
     btn.disabled = true;
   }
   const fill = document.querySelector(".update-notice-progress-fill") as HTMLElement | null;
-  if (fill && pct !== undefined) {
+  if (fill && pct !== undefined && Number.isFinite(pct)) {
     const clamped = Math.max(0, Math.min(100, pct));
     fill.style.width = `${clamped}%`;
   }
@@ -422,6 +422,10 @@ function resetUpdateNotice(): void {
   const notice = document.querySelector(".update-notice");
   if (!notice) return;
   notice.classList.remove("installing");
+  // Clear the progress fill so a retry doesn't briefly show the failed
+  // attempt's last percentage before the next Started event lands. (#529)
+  const fill = notice.querySelector(".update-notice-progress-fill") as HTMLElement | null;
+  if (fill) fill.style.width = "0%";
   const btn = notice.querySelector(".update-notice-action") as HTMLButtonElement | null;
   if (btn) {
     btn.textContent = "Download";

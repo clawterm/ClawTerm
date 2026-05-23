@@ -288,22 +288,30 @@ fn compute_diff_stats(path: &std::path::Path) -> Result<(u32, u32), String> {
     let mut added: u32 = 0;
     let mut removed: u32 = 0;
 
-    let diff_stdout = run_git_with_timeout(
+    // Each subprocess is best-effort independently: an empty repo (no
+    // HEAD commits) makes `git diff HEAD` exit non-zero but `git ls-files`
+    // still works, so the badge should reflect the untracked files even
+    // then. Don't propagate either Err — let the caller see (0, 0) only
+    // when both subprocesses fail.
+    if let Ok(diff_stdout) = run_git_with_timeout(
         &["--no-optional-locks", "diff", "--numstat", "--no-renames", "HEAD"],
         path,
-    )?;
-    for line in diff_stdout.lines() {
-        let mut parts = line.split('\t');
-        let a = parts.next().unwrap_or("-");
-        let r = parts.next().unwrap_or("-");
-        added = added.saturating_add(a.parse::<u32>().unwrap_or(0));
-        removed = removed.saturating_add(r.parse::<u32>().unwrap_or(0));
+    ) {
+        for line in diff_stdout.lines() {
+            let mut parts = line.split('\t');
+            let a = parts.next().unwrap_or("-");
+            let r = parts.next().unwrap_or("-");
+            added = added.saturating_add(a.parse::<u32>().unwrap_or(0));
+            removed = removed.saturating_add(r.parse::<u32>().unwrap_or(0));
+        }
     }
 
-    let untracked_stdout = run_git_with_timeout(
+    let Ok(untracked_stdout) = run_git_with_timeout(
         &["--no-optional-locks", "ls-files", "--others", "--exclude-standard"],
         path,
-    )?;
+    ) else {
+        return Ok((added, removed));
+    };
     let mut counted = 0usize;
     for rel in untracked_stdout.lines() {
         if rel.is_empty() {
