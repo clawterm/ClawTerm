@@ -2304,6 +2304,21 @@ body {
   background: var(--overlay-backdrop);
 }
 
+/* Quit-time install indicator — covers the whole window while install()
+   does the macOS bundle swap. Text-only; no controls. (#558) */
+.quit-install-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-confirm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--overlay-backdrop);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--font-sm);
+}
+
 .update-dialog {
   background: var(--bg-modal);
   border: var(--border-width) solid var(--border-subtle);
