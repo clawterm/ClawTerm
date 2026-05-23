@@ -34,6 +34,14 @@ export default defineConfig({
   base: "/clawterm/docs/",
   cleanUrls: true,
   lastUpdated: true,
+  // Force dark — ClawTerm has no light mode. Hides the navbar theme toggle. (#528)
+  appearance: "force-dark",
+  head: [
+    ["link", { rel: "icon", type: "image/svg+xml", href: "/clawterm/favicon.svg" }],
+    ["link", { rel: "icon", type: "image/png", sizes: "96x96", href: "/clawterm/favicon-96x96.png" }],
+    ["link", { rel: "apple-touch-icon", sizes: "180x180", href: "/clawterm/apple-touch-icon.png" }],
+    ["meta", { name: "theme-color", content: "#050607" }],
+  ],
 
   // The marketing landing and screenshots live alongside the docs source.
   // Skip them so VitePress doesn't try to render or copy them.

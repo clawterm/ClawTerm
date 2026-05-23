@@ -1,0 +1,62 @@
+/* VitePress theme overrides — align the docs site to the ClawTerm dark
+ * palette + Command Green accent + JetBrains Mono typography. Force-dark
+ * mode is set in config.ts so the toggle is hidden. (#528)
+ *
+ * Token values mirror docs/brand-tokens.css (#530); the shared file is
+ * not imported here because VitePress controls its own CSS variable
+ * names. If the source-of-truth values change, sync them by hand —
+ * scope is small enough (10 tokens) that drift is easy to spot.
+ */
+:root,
+.dark {
+  /* Surfaces */
+  --vp-c-bg: #050607;
+  --vp-c-bg-alt: #0b0d0e;
+  --vp-c-bg-soft: #111315;
+  --vp-c-bg-elv: #111315;
+
+  /* Dividers / borders */
+  --vp-c-divider: #22262a;
+  --vp-c-gutter: #22262a;
+
+  /* Text */
+  --vp-c-text-1: rgba(244, 244, 245, 0.9);
+  --vp-c-text-2: rgba(244, 244, 245, 0.55);
+  --vp-c-text-3: rgba(244, 244, 245, 0.35);
+
+  /* Brand — Command Green. */
+  --vp-c-brand-1: #7cff4f;
+  --vp-c-brand-2: #8fff6a;
+  --vp-c-brand-3: #7cff4f;
+  --vp-c-brand-soft: rgba(124, 255, 79, 0.12);
+  --vp-c-brand-mute: rgba(124, 255, 79, 0.08);
+
+  /* Buttons */
+  --vp-button-brand-text: #050607;
+  --vp-button-brand-bg: #7cff4f;
+  --vp-button-brand-hover-bg: #8fff6a;
+  --vp-button-brand-hover-text: #050607;
+  --vp-button-brand-active-bg: #7cff4f;
+  --vp-button-brand-active-text: #050607;
+  --vp-button-brand-border: transparent;
+  --vp-button-brand-hover-border: transparent;
+  --vp-button-brand-active-border: transparent;
+
+  /* Code blocks — keep them on the elevated surface so they read as
+   * separate from body copy. */
+  --vp-code-block-bg: #111315;
+  --vp-code-bg: rgba(124, 255, 79, 0.08);
+  --vp-code-color: rgba(244, 244, 245, 0.9);
+
+  /* Custom blocks — info / tip / warning / danger keep semantic colors
+   * (no green for warn/danger). The "tip" block uses brand-soft. */
+  --vp-custom-block-tip-bg: rgba(124, 255, 79, 0.08);
+  --vp-custom-block-tip-border: rgba(124, 255, 79, 0.35);
+  --vp-custom-block-tip-text: rgba(244, 244, 245, 0.9);
+
+  /* Typography — mono everywhere, per docs/brand.md § Type. */
+  --vp-font-family-base:
+    "JetBrains Mono", "SFMono-Regular", ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+  --vp-font-family-mono:
+    "JetBrains Mono", "SFMono-Regular", ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+}
