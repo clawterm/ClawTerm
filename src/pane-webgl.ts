@@ -42,9 +42,23 @@ const pool = new WebGLPool();
  * Extracted from Pane to isolate GPU-related concerns.
  * Uses a shared LRU pool to keep recently-used contexts alive (#290).
  */
+/** Per-pane image-storage cap (#565). The xterm.js ImageAddon defaults to
+ *  128 MB per pane, which on an 8-pane workspace can pin ~1 GB to images
+ *  alone. 32 MB still holds several screenshot-sized PNGs while keeping
+ *  the worst-case multi-pane footprint bounded. The cap is FIFO-evicted,
+ *  so an active image-heavy session sees older bitmaps replaced with the
+ *  placeholder glyph rather than failing. */
+const IMAGE_STORAGE_LIMIT_MB = 32;
+
+interface ImageAddonHandle {
+  dispose(): void;
+  reset(): void;
+  readonly storageUsage: number;
+}
+
 export class WebGLManager {
   private webglAddon: WebglAddon | null = null;
-  private imageAddon: { dispose(): void } | null = null;
+  private imageAddon: ImageAddonHandle | null = null;
   private deferredTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
@@ -112,13 +126,28 @@ export class WebGLManager {
       try {
         const { ImageAddon } = await import("@xterm/addon-image");
         if (this.isDisposed()) return;
-        const img = new ImageAddon();
+        const img = new ImageAddon({ storageLimit: IMAGE_STORAGE_LIMIT_MB });
         this.terminal.loadAddon(img);
         this.imageAddon = img;
       } catch {
         // Image addon may fail if WebGL is unavailable
       }
     }
+  }
+
+  /** Reset image storage for this pane (FIFO-evicts all stored bitmaps).
+   *  Surfaced via the "Reset Pane Images" command palette entry as a manual
+   *  escape hatch for when a session has pinned a lot of image memory and
+   *  the user wants to reclaim it without closing the pane. (#565) */
+  resetImages(): void {
+    this.imageAddon?.reset();
+  }
+
+  /** Current image-addon storage usage in MB (0 if the addon isn't loaded
+   *  or no images are stored). Surfaced by the memory-diagnostics command
+   *  to attribute RAM growth per pane. (#565, #566) */
+  getImageStorageMb(): number {
+    return this.imageAddon?.storageUsage ?? 0;
   }
 
   /**

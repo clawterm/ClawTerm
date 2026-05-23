@@ -1409,6 +1409,24 @@ export class TerminalManager {
       },
       { id: "close-pane", label: "Close Pane", category: "Panes", action: () => this.closeActivePane() },
       {
+        id: "reset-pane-images",
+        label: "Reset Pane Images",
+        category: "Panes",
+        action: () => {
+          const tab = this.activeTabId ? this.tabs.get(this.activeTabId) : null;
+          const pane = tab?.getFocusedPane();
+          if (!pane) return;
+          const before = pane.getImageStorageMb();
+          pane.resetImages();
+          showToast(
+            before > 0
+              ? `Reset image storage (≈${Math.round(before)} MB freed)`
+              : "Reset image storage",
+            "info",
+          );
+        },
+      },
+      {
         id: "focus-next-pane",
         label: "Focus Next Pane",
         category: "Panes",

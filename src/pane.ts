@@ -1300,6 +1300,18 @@ export class Pane {
     this.webgl?.deactivate(contextLost);
   }
 
+  /** Reset this pane's xterm.js ImageAddon storage (#565). No-op when the
+   *  pane has no WebGL/Image addons loaded yet. */
+  resetImages() {
+    this.webgl?.resetImages();
+  }
+
+  /** Current image-storage usage for this pane in MB (#565, #566). Returns
+   *  0 when no images are stored or the addon isn't loaded. */
+  getImageStorageMb(): number {
+    return this.webgl?.getImageStorageMb() ?? 0;
+  }
+
   /** Read the last N lines from the terminal buffer (for content-based status detection). */
   getLastLines(count: number): string[] {
     const buf = this.terminal.buffer.active;
