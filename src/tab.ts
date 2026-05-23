@@ -99,6 +99,10 @@ export class Tab {
    *  banner — already filtered for mute, focused-pane, and window
    *  visibility. Subscribers just route to the notification surface. */
   onOscNotification: ((text: string) => void) | null = null;
+  /** Fires when a foreground command finishes in a backgrounded tab.
+   *  Already filtered by visibility and the duration threshold; the
+   *  notification manager applies its own enabled/permission gates. (#552) */
+  onCommandComplete: ((processName: string, durationMs: number) => void) | null = null;
   onOutputEvent: ((event: OutputEvent) => void) | null = null;
   /** Fires on PTY activity for any pane in this tab — forwarded to the
    *  central poll loop's wake() so adaptive idle mode can break out
@@ -791,6 +795,51 @@ export class Tab {
       } else {
         pane.idleConsecutive = 0;
       }
+
+      // Command-completion detection. Fire when foreground transitions
+      // away from the shell PID (command started) and then back to it
+      // (command finished). Only fires if (a) tab is hidden — no need
+      // to notify about a tab the user is actively looking at, (b) the
+      // command ran long enough to be interesting, gated downstream by
+      // the notification manager's threshold. (#552 phase 1)
+      const prevFg = pane.lastForegroundPid;
+      if (prevFg == null) {
+        // First poll — initialize baseline.
+        if (!newIsIdle) {
+          pane.foregroundStartedAt = Date.now();
+          // Best-effort name lookup; ignore failures so we don't stall the poll.
+          invoke<string>("get_process_name", { pid: fgPgid }).then(
+            (name) => {
+              pane.foregroundName = name;
+            },
+            () => {
+              pane.foregroundName = null;
+            },
+          );
+        }
+      } else if (prevFg !== shellPid && fgPgid === shellPid) {
+        // Foreground just returned to the shell — a command finished.
+        const startedAt = pane.foregroundStartedAt;
+        const name = pane.foregroundName ?? "command";
+        pane.foregroundStartedAt = null;
+        pane.foregroundName = null;
+        if (startedAt != null && !this.isVisible) {
+          const duration = Date.now() - startedAt;
+          this.onCommandComplete?.(name, duration);
+        }
+      } else if (prevFg === shellPid && fgPgid !== shellPid) {
+        // Foreground just left the shell — a command started.
+        pane.foregroundStartedAt = Date.now();
+        invoke<string>("get_process_name", { pid: fgPgid }).then(
+          (name) => {
+            pane.foregroundName = name;
+          },
+          () => {
+            pane.foregroundName = null;
+          },
+        );
+      }
+      pane.lastForegroundPid = fgPgid;
 
       const skipExpensive = newIsIdle && pane.idleConsecutive > 5;
 

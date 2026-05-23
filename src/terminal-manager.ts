@@ -799,6 +799,12 @@ export class TerminalManager {
       });
     };
 
+    tab.onCommandComplete = (processName, durationMs) => {
+      // Opt-in non-OSC completion notifications. The manager applies its
+      // own enabled/permission/threshold/cooldown gates. (#552 phase 1)
+      this.notifications.notifyCommandComplete(processName, durationMs, tab.title, tab.id);
+    };
+
     tab.onOutputEvent = (event: OutputEvent) => {
       this.handleTabOutputEvent(id, tab, event);
     };

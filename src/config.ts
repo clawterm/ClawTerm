@@ -8,7 +8,7 @@ export type { Config, UserMatcher } from "./config-types";
 import type { Config } from "./config-types";
 
 /** Current config schema version. Bump when adding/changing config fields. */
-const CONFIG_VERSION = 5;
+const CONFIG_VERSION = 6;
 
 /** Return the default shell. */
 function defaultShell(): string {
@@ -127,6 +127,8 @@ export const DEFAULT_CONFIG: Config = {
   },
   notifications: {
     enabled: true,
+    commandCompletion: false,
+    commandCompletionThresholdMs: 30_000,
   },
   updates: {
     autoCheck: true,
@@ -379,6 +381,23 @@ function migrateConfig(config: Record<string, unknown>): void {
       delete updates.autoInstall;
     }
     logger.debug("Migrated config from v4 to v5");
+  }
+
+  // Migration 5 → 6: introduce notifications.commandCompletion (opt-in,
+  // default false) + threshold. PID-heuristic completion banner for
+  // long-running shell tasks in background tabs. (#552 phase 1)
+  if (version < 6) {
+    config.configVersion = 6;
+    const notifications = config.notifications as Record<string, unknown> | undefined;
+    if (notifications) {
+      if (!("commandCompletion" in notifications)) {
+        notifications.commandCompletion = false;
+      }
+      if (!("commandCompletionThresholdMs" in notifications)) {
+        notifications.commandCompletionThresholdMs = 30_000;
+      }
+    }
+    logger.debug("Migrated config from v5 to v6");
   }
 
   // Migration: strip legacy theme fields from user config

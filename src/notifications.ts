@@ -4,10 +4,21 @@ import { isPermissionGranted, requestPermission, sendNotification } from "@tauri
 
 export interface NotificationsConfig {
   enabled: boolean;
+  /** Opt-in: fire a banner when a long-running shell command finishes
+   *  in a backgrounded tab. Detected via the PID heuristic
+   *  (foreground transitions back to the shell). Default off — some
+   *  users find these distracting. (#552 phase 1) */
+  commandCompletion: boolean;
+  /** Minimum command duration before completion notifications fire,
+   *  in milliseconds. Suppresses every-prompt noise; only fires when a
+   *  command was actually long-running. (#552) */
+  commandCompletionThresholdMs: number;
 }
 
 export const DEFAULT_NOTIFICATIONS_CONFIG: NotificationsConfig = {
   enabled: true,
+  commandCompletion: false,
+  commandCompletionThresholdMs: 30_000,
 };
 
 /** Minimum gap between consecutive system banners for the same tab. A
@@ -112,6 +123,27 @@ export class NotificationManager {
     this.lastSentAt.delete(tabId);
   }
 
+  /** Opt-in: notify when a long-running shell command finishes in a
+   *  backgrounded tab. Gated behind `notifications.commandCompletion`
+   *  and a duration threshold so every-prompt noise doesn't leak. (#552) */
+  notifyCommandComplete(processName: string, durationMs: number, tabTitle: string, tabId: string) {
+    if (!this.config.enabled || !this.config.commandCompletion) return;
+    if (durationMs < this.config.commandCompletionThresholdMs) return;
+    if (!this.permissionGranted) {
+      this.surfaceDenialOnce();
+      return;
+    }
+    // Re-use the per-tab banner cooldown so a flurry of short subprocesses
+    // in a script doesn't fire multiple banners. (#551)
+    const now = Date.now();
+    const last = this.lastSentAt.get(tabId) ?? 0;
+    if (now - last < PER_TAB_COOLDOWN_MS) return;
+    this.lastSentAt.set(tabId, now);
+
+    const body = `${tabTitle}: ${processName} finished (${formatDuration(durationMs)})`;
+    this.sendWithClickSupport("ClawTerm", body, tabId);
+  }
+
   /** Tell the user once per session that the OS is blocking notifications.
    *  Without this, denied permission is a silent failure — the user sees
    *  the sidebar dot but never a banner, and reasonably concludes the app
@@ -162,4 +194,14 @@ export class NotificationManager {
   dispose() {
     this.onFocusTab = null;
   }
+}
+
+function formatDuration(ms: number): string {
+  const s = Math.floor(ms / 1000);
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  if (m < 60) return `${m}m ${sec}s`;
+  const h = Math.floor(m / 60);
+  return `${h}h ${m % 60}m`;
 }
